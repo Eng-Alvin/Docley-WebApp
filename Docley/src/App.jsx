@@ -15,14 +15,18 @@ import ResetPassword from './pages/Auth/ResetPassword';
 import AuthCallback from './pages/Auth/AuthCallback';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import { FloatingDocuments } from './components/ui/FloatingDocuments';
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <FloatingDocuments />
+          <Router>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -65,10 +69,11 @@ function App() {
               <Route path="documents" element={<DashboardDocuments />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
-          </Routes>
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+            </Routes>
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

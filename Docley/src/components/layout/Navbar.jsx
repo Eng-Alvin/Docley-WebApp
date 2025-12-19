@@ -3,10 +3,14 @@ import { Button } from '../ui/Button';
 import { Sparkles, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
+import { ThemeToggle } from '../ui/ThemeToggle';
+import { useTheme } from '../../context/ThemeContext';
 
 export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const location = useLocation();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     const navLinks = [
         { name: 'Features', href: '/#features' },
@@ -17,16 +21,24 @@ export function Navbar() {
     const isActive = (path) => location.pathname === path;
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
+        <nav className={cn(
+            "sticky top-0 z-50 w-full border-b backdrop-blur-xl transition-colors duration-300",
+            isDark 
+                ? "border-white/10 bg-slate-950/80" 
+                : "border-blue-100/50 bg-white/80 shadow-sm"
+        )}>
             <div className="container mx-auto px-4 md:px-6">
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-blue-500 shadow-lg shadow-orange-500/30">
                             <Sparkles className="h-5 w-5 text-white" />
                         </div>
-                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-violet-600">
-                            Academic Transformer
+                        <span className={cn(
+                            "text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-blue-500",
+                            isDark && "from-orange-400 to-blue-400"
+                        )}>
+                            Docley
                         </span>
                     </Link>
 
@@ -38,57 +50,84 @@ export function Navbar() {
                                     key={link.name}
                                     to={link.href}
                                     className={cn(
-                                        "px-4 py-2 text-sm font-medium rounded-full transition-colors",
+                                        "px-4 py-2 text-sm font-medium rounded-full transition-all duration-300",
                                         isActive(link.href)
-                                            ? "bg-slate-100 text-slate-900"
-                                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                            ? isDark
+                                                ? "bg-white/10 text-white border border-white/20"
+                                                : "bg-blue-50 text-blue-700 border border-blue-200"
+                                            : isDark
+                                                ? "text-slate-400 hover:text-white hover:bg-white/5"
+                                                : "text-slate-600 hover:text-blue-600 hover:bg-blue-50/50"
                                     )}
                                 >
                                     {link.name}
                                 </Link>
                             ))}
                         </div>
-                        <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
+                        <div className={cn(
+                            "flex items-center gap-3 pl-2 border-l",
+                            isDark ? "border-white/10" : "border-blue-100"
+                        )}>
+                            <ThemeToggle />
                             <Link to="/login">
-                                <Button variant="ghost" size="sm">Log in</Button>
+                                <Button variant="ghost" size="sm" className={isDark ? "text-slate-300 hover:text-white hover:bg-white/5" : "text-slate-600 hover:text-slate-900"}>Log in</Button>
                             </Link>
                             <Link to="/signup">
-                                <Button size="sm">Get Started</Button>
+                                <Button size="sm" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-lg shadow-orange-500/30">Get Started</Button>
                             </Link>
                         </div>
                     </div>
 
                     {/* Mobile Menu Toggle */}
-                    <button
-                        className="md:hidden p-2 text-slate-600"
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    >
-                        {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </button>
+                    <div className="md:hidden flex items-center gap-2">
+                        <ThemeToggle />
+                        <button
+                            className={cn(
+                                "p-2 transition-colors",
+                                isDark ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                            )}
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        >
+                            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden border-t border-slate-200 bg-white px-4 py-6 shadow-lg animate-in slide-in-from-top-2">
+                <div className={cn(
+                    "md:hidden border-t backdrop-blur-xl px-4 py-6 shadow-2xl animate-in slide-in-from-top-2",
+                    isDark 
+                        ? "border-white/10 bg-slate-950/95" 
+                        : "border-blue-100 bg-white/95"
+                )}>
                     <div className="flex flex-col space-y-4">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.name}
                                 to={link.href}
-                                className="text-base font-medium text-slate-600 hover:text-slate-900"
+                                className={cn(
+                                    "text-base font-medium transition-colors",
+                                    isDark ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-blue-600"
+                                )}
                                 onClick={() => setIsMenuOpen(false)}
                             >
                                 {link.name}
                             </Link>
                         ))}
-                        <hr className="border-slate-100" />
+                        <hr className={isDark ? "border-white/10" : "border-blue-100"} />
                         <div className="flex flex-col gap-3">
                             <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                                <Button variant="outline" className="w-full justify-center">Log in</Button>
+                                <Button variant="outline" className={cn(
+                                    "w-full justify-center",
+                                    isDark 
+                                        ? "bg-white/5 border-white/20 text-white hover:bg-white/10" 
+                                        : "bg-white border-blue-200 text-slate-700 hover:bg-blue-50"
+                                )}>Log in</Button>
                             </Link>
                             <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                                <Button className="w-full justify-center">Get Started</Button>
+                                <Button className="w-full justify-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0">Get Started</Button>
                             </Link>
                         </div>
                     </div>

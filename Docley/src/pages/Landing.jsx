@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, ChevronDown, Download, FileText, GraduationCap, Layout, ShieldCheck, Sparkles, Wand2, X } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -6,24 +6,39 @@ import { Card } from '../components/ui/Card';
 import { Footer } from '../components/layout/Footer';
 import { Navbar } from '../components/layout/Navbar';
 import { cn } from '../lib/utils';
+import { useTheme } from '../context/ThemeContext';
 
-function FAQItem({ item, isOpen, onToggle }) {
+function FAQItem({ item, isOpen, onToggle, isDark }) {
     return (
         <button
             type="button"
             onClick={onToggle}
             className={cn(
-                "w-full text-left rounded-xl border border-slate-200 bg-white px-5 py-4 transition-shadow",
-                isOpen && "shadow-sm"
+                "w-full text-left rounded-xl border backdrop-blur-xl px-5 py-4 transition-all duration-300",
+                isDark 
+                    ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20" 
+                    : "border-blue-200 bg-white hover:bg-blue-50 hover:border-blue-300 shadow-sm",
+                isOpen && (isDark ? "shadow-lg bg-white/10" : "shadow-md bg-blue-50")
             )}
             aria-expanded={isOpen}
         >
             <div className="flex items-center justify-between gap-4">
-                <span className="font-semibold text-slate-900">{item.q}</span>
-                <ChevronDown className={cn("h-4 w-4 text-slate-500 transition-transform", isOpen && "rotate-180")} />
+                <span className={cn(
+                    "font-semibold",
+                    isDark ? "text-white" : "text-slate-900"
+                )}>{item.q}</span>
+                <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform duration-300",
+                    isDark 
+                        ? isOpen ? "rotate-180 text-orange-400" : "text-slate-400"
+                        : isOpen ? "rotate-180 text-orange-500" : "text-slate-500"
+                )} />
             </div>
             {isOpen && (
-                <div className="mt-3 text-sm text-slate-600 leading-relaxed">
+                <div className={cn(
+                    "mt-3 text-sm leading-relaxed animate-in fade-in slide-in-from-top-2 duration-300",
+                    isDark ? "text-slate-300" : "text-slate-600"
+                )}>
                     {item.a}
                 </div>
             )}
@@ -31,16 +46,31 @@ function FAQItem({ item, isOpen, onToggle }) {
     );
 }
 
-function BrowserFrame({ url, children }) {
+function BrowserFrame({ url, children, isDark }) {
     return (
-        <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
-            <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-5 py-3">
+        <div className={cn(
+            "overflow-hidden rounded-[32px] border backdrop-blur-xl shadow-2xl",
+            isDark 
+                ? "border-white/20 bg-white/5 shadow-black/20" 
+                : "border-blue-200 bg-white shadow-blue-500/10"
+        )}>
+            <div className={cn(
+                "flex items-center gap-2 border-b backdrop-blur-sm px-5 py-3",
+                isDark 
+                    ? "border-white/10 bg-white/5" 
+                    : "border-blue-100 bg-white"
+            )}>
                 <div className="flex gap-2">
-                    <span className="h-3 w-3 rounded-full bg-slate-300/80" />
-                    <span className="h-3 w-3 rounded-full bg-slate-300/80" />
-                    <span className="h-3 w-3 rounded-full bg-slate-300/80" />
+                    <span className="h-3 w-3 rounded-full bg-red-500/50" />
+                    <span className="h-3 w-3 rounded-full bg-yellow-500/50" />
+                    <span className="h-3 w-3 rounded-full bg-green-500/50" />
                 </div>
-                <div className="mx-auto hidden h-8 w-[46%] items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-500 shadow-sm md:flex">
+                <div className={cn(
+                    "mx-auto hidden h-8 w-[46%] items-center justify-center rounded-lg border backdrop-blur-sm text-xs font-medium shadow-sm md:flex",
+                    isDark 
+                        ? "border-white/10 bg-white/5 text-white/70" 
+                        : "border-blue-200 bg-white text-slate-500"
+                )}>
                     {url}
                 </div>
             </div>
@@ -49,19 +79,35 @@ function BrowserFrame({ url, children }) {
     );
 }
 
-function ProductUIMock() {
+function ProductUIMock({ isDark }) {
     return (
-        <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-white">
+        <div className={cn(
+            "relative aspect-[16/9] transition-colors duration-300",
+            isDark 
+                ? "bg-gradient-to-br from-slate-900 to-slate-950" 
+                : "bg-gradient-to-br from-slate-50 to-white"
+        )}>
             <div className="absolute inset-0 p-5 md:p-7">
                 <div className="grid h-full grid-cols-12 gap-4">
                     {/* sidebar */}
                     <div className="col-span-4 hidden md:block">
-                        <div className="h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className={cn(
+                            "h-full rounded-2xl border backdrop-blur-xl p-4 shadow-lg transition-colors duration-300",
+                            isDark 
+                                ? "border-white/10 bg-white/5" 
+                                : "border-blue-200 bg-white"
+                        )}>
                             <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold">D</div>
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-blue-500 text-white font-bold shadow-lg">D</div>
                                 <div className="min-w-0">
-                                    <div className="truncate text-sm font-semibold text-slate-900">Dashboard</div>
-                                    <div className="truncate text-xs text-slate-500">Free plan</div>
+                                    <div className={cn(
+                                        "truncate text-sm font-semibold",
+                                        isDark ? "text-white" : "text-slate-900"
+                                    )}>Dashboard</div>
+                                    <div className={cn(
+                                        "truncate text-xs",
+                                        isDark ? "text-slate-400" : "text-slate-500"
+                                    )}>Free plan</div>
                                 </div>
                             </div>
                             <div className="mt-5 space-y-2">
@@ -69,39 +115,78 @@ function ProductUIMock() {
                                     <div
                                         key={i}
                                         className={cn(
-                                            "rounded-xl px-3 py-2 text-xs font-semibold border",
+                                            "rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
                                             idx === 1
-                                                ? "border-indigo-200 bg-indigo-50 text-indigo-900"
-                                                : "border-slate-200 bg-white text-slate-700"
+                                                ? isDark
+                                                    ? "border-orange-500/30 bg-orange-500/10 text-orange-300"
+                                                    : "border-orange-200 bg-orange-50 text-orange-700"
+                                                : isDark
+                                                    ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                                                    : "border-blue-200 bg-white text-slate-700 hover:bg-blue-50"
                                         )}
                                     >
                                         {i}
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                <div className="text-[11px] font-semibold text-slate-700">Usage</div>
-                                <div className="mt-2 h-2 rounded-full bg-slate-200">
-                                    <div className="h-2 w-1/3 rounded-full bg-indigo-600" />
+                            <div className={cn(
+                                "mt-6 rounded-2xl border backdrop-blur-sm p-3",
+                                isDark 
+                                    ? "border-white/10 bg-white/5" 
+                                    : "border-blue-200 bg-blue-50/50"
+                            )}>
+                                <div className={cn(
+                                    "text-[11px] font-semibold",
+                                    isDark ? "text-white" : "text-slate-900"
+                                )}>Usage</div>
+                                <div className={cn(
+                                    "mt-2 h-2 rounded-full",
+                                    isDark ? "bg-white/10" : "bg-blue-200"
+                                )}>
+                                    <div className="h-2 w-1/3 rounded-full bg-gradient-to-r from-orange-500 to-blue-500" />
                                 </div>
-                                <div className="mt-2 text-[11px] text-slate-500">1/3 upgrades used</div>
+                                <div className={cn(
+                                    "mt-2 text-[11px]",
+                                    isDark ? "text-slate-400" : "text-slate-600"
+                                )}>1/3 upgrades used</div>
                             </div>
                         </div>
                     </div>
 
                     {/* editor */}
                     <div className="col-span-12 md:col-span-8">
-                        <div className="h-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+                        <div className={cn(
+                            "h-full overflow-hidden rounded-2xl border backdrop-blur-xl shadow-lg transition-colors duration-300",
+                            isDark 
+                                ? "border-white/10 bg-white/5" 
+                                : "border-blue-200 bg-white"
+                        )}>
+                            <div className={cn(
+                                "flex items-center justify-between border-b backdrop-blur-sm px-4 py-3",
+                                isDark 
+                                    ? "border-white/10 bg-white/5" 
+                                    : "border-blue-100 bg-white"
+                            )}>
                                 <div className="min-w-0">
-                                    <div className="truncate text-sm font-semibold text-slate-900">Economics 101: Inflation Analysis</div>
-                                    <div className="text-xs text-slate-500">APA 7th • Undergraduate</div>
+                                    <div className={cn(
+                                        "truncate text-sm font-semibold",
+                                        isDark ? "text-white" : "text-slate-900"
+                                    )}>Economics 101: Inflation Analysis</div>
+                                    <div className={cn(
+                                        "text-xs",
+                                        isDark ? "text-slate-400" : "text-slate-500"
+                                    )}>APA 7th • Undergraduate</div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700">
+                                    <div className={cn(
+                                        "rounded-lg border backdrop-blur-sm px-3 py-1.5 text-[11px] font-semibold",
+                                        isDark 
+                                            ? "border-white/10 bg-white/5 text-slate-300" 
+                                            : "border-blue-200 bg-white text-slate-600"
+                                    )}>
                                         Export
                                     </div>
-                                    <div className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white">
+                                    <div className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-orange-500/30">
                                         Run upgrade
                                     </div>
                                 </div>
@@ -109,25 +194,61 @@ function ProductUIMock() {
 
                             <div className="grid h-[calc(100%-48px)] grid-cols-12">
                                 <div className="col-span-12 lg:col-span-8 p-4">
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                        <div className="h-2 w-40 rounded bg-slate-200" />
+                                    <div className={cn(
+                                        "rounded-xl border backdrop-blur-sm p-4",
+                                        isDark 
+                                            ? "border-white/10 bg-white/5" 
+                                            : "border-blue-200 bg-blue-50/50"
+                                    )}>
+                                        <div className={cn(
+                                            "h-2 w-40 rounded",
+                                            isDark ? "bg-white/20" : "bg-blue-200"
+                                        )} />
                                         <div className="mt-3 space-y-2">
-                                            <div className="h-2 w-full rounded bg-slate-100" />
-                                            <div className="h-2 w-[94%] rounded bg-slate-100" />
-                                            <div className="h-2 w-[88%] rounded bg-slate-100" />
-                                            <div className="h-2 w-[82%] rounded bg-slate-100" />
+                                            <div className={cn(
+                                                "h-2 w-full rounded",
+                                                isDark ? "bg-white/10" : "bg-blue-100"
+                                            )} />
+                                            <div className={cn(
+                                                "h-2 w-[94%] rounded",
+                                                isDark ? "bg-white/10" : "bg-blue-100"
+                                            )} />
+                                            <div className={cn(
+                                                "h-2 w-[88%] rounded",
+                                                isDark ? "bg-white/10" : "bg-blue-100"
+                                            )} />
+                                            <div className={cn(
+                                                "h-2 w-[82%] rounded",
+                                                isDark ? "bg-white/10" : "bg-blue-100"
+                                            )} />
                                         </div>
-                                        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                                        <div className={cn(
+                                            "mt-4 inline-flex items-center gap-2 rounded-full border backdrop-blur-sm px-3 py-1 text-[11px] font-semibold",
+                                            isDark 
+                                                ? "border-orange-500/30 bg-orange-500/10 text-orange-300" 
+                                                : "border-orange-200 bg-orange-50 text-orange-700"
+                                        )}>
                                             Highlight: informal phrase
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="hidden lg:block lg:col-span-4 border-l border-slate-200 p-4">
-                                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                <div className={cn(
+                                    "hidden lg:block lg:col-span-4 border-l p-4",
+                                    isDark ? "border-white/10" : "border-blue-100"
+                                )}>
+                                    <div className={cn(
+                                        "rounded-xl border backdrop-blur-sm p-4",
+                                        isDark 
+                                            ? "border-white/10 bg-white/5" 
+                                            : "border-blue-200 bg-white"
+                                    )}>
                                         <div className="flex items-center justify-between">
-                                            <div className="text-xs font-semibold text-slate-900">Diagnostics</div>
-                                            <div className="text-xs font-bold text-indigo-700">B+</div>
+                                            <div className={cn(
+                                                "text-xs font-semibold",
+                                                isDark ? "text-white" : "text-slate-900"
+                                            )}>Diagnostics</div>
+                                            <div className="text-xs font-bold text-orange-500">B+</div>
                                         </div>
                                         <div className="mt-3 space-y-3">
                                             {[
@@ -136,19 +257,36 @@ function ProductUIMock() {
                                                 { label: "Clarity", value: 90 },
                                             ].map((row) => (
                                                 <div key={row.label}>
-                                                    <div className="flex items-center justify-between text-[11px] text-slate-600">
+                                                    <div className={cn(
+                                                        "flex items-center justify-between text-[11px]",
+                                                        isDark ? "text-slate-300" : "text-slate-600"
+                                                    )}>
                                                         <span>{row.label}</span>
-                                                        <span className="font-semibold text-slate-900">{row.value}</span>
+                                                        <span className={cn(
+                                                            "font-semibold",
+                                                            isDark ? "text-white" : "text-slate-900"
+                                                        )}>{row.value}</span>
                                                     </div>
-                                                    <div className="mt-1 h-1.5 rounded-full bg-slate-100">
-                                                        <div className="h-1.5 rounded-full bg-indigo-600" style={{ width: `${row.value}%` }} />
+                                                    <div className={cn(
+                                                        "mt-1 h-1.5 rounded-full",
+                                                        isDark ? "bg-white/10" : "bg-blue-100"
+                                                    )}>
+                                                        <div className="h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-blue-500" style={{ width: `${row.value}%` }} />
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-[11px] text-slate-600">
-                                        <span className="font-semibold text-slate-900">Suggestion:</span> strengthen topic sentences in paragraphs 2–3.
+                                    <div className={cn(
+                                        "mt-3 rounded-xl border backdrop-blur-sm p-4 text-[11px]",
+                                        isDark 
+                                            ? "border-white/10 bg-white/5 text-slate-300" 
+                                            : "border-blue-200 bg-blue-50/50 text-slate-600"
+                                    )}>
+                                        <span className={cn(
+                                            "font-semibold",
+                                            isDark ? "text-white" : "text-slate-900"
+                                        )}>Suggestion:</span> strengthen topic sentences in paragraphs 2–3.
                                     </div>
                                 </div>
                             </div>
@@ -160,41 +298,72 @@ function ProductUIMock() {
     );
 }
 
-function LifestyleHeroMock() {
+function LifestyleHeroMock({ isDark }) {
     return (
-        <div className="relative aspect-[16/9] bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-600">
-            <div className="absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(circle_at_80%_70%,rgba(255,255,255,0.18),transparent_55%)]" />
+        <div className={cn(
+            "relative aspect-[16/9] overflow-hidden transition-colors duration-300",
+            isDark 
+                ? "bg-gradient-to-br from-orange-500 via-orange-600 to-blue-600" 
+                : "bg-gradient-to-br from-orange-400 via-blue-400 to-blue-500"
+        )}>
+            {/* Animated gradient overlays */}
+            <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.3),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,0.3),transparent_50%)] animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/20 to-transparent" />
+            
+            {/* Floating particles */}
+            <div className="absolute inset-0">
+                {[...Array(6)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute rounded-full bg-white/20 blur-xl animate-blob"
+                        style={{
+                            width: `${Math.random() * 200 + 100}px`,
+                            height: `${Math.random() * 200 + 100}px`,
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${i * 0.5}s`,
+                            animationDuration: `${10 + Math.random() * 10}s`,
+                        }}
+                    />
+                ))}
+            </div>
+
             <div className="absolute inset-0 p-6 md:p-10">
                 <div className="relative h-full">
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative w-full max-w-5xl">
-                            <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-sm">
+                            <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-sm animate-in fade-in duration-1000">
                                 <div className="relative aspect-[16/9]">
                                     <img
                                         src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=2000"
                                         alt="Students collaborating on an assignment"
-                                        className="absolute inset-0 h-full w-full object-cover opacity-95"
+                                        className="absolute inset-0 h-full w-full object-cover opacity-90"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/35 via-slate-900/10 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-slate-900/15 to-transparent" />
                                 </div>
                             </div>
 
-                            {/* glass overlay prompt (Cluely-like) */}
-                            <div className="absolute left-1/2 top-1/2 w-[min(560px,92%)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-slate-950/55 p-5 text-white shadow-2xl backdrop-blur-xl">
-                                <div className="flex items-center justify-between gap-3">
-                                    <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
+                            {/* Glass overlay prompt with enhanced styling */}
+                            <div className="absolute left-1/2 top-1/2 w-[min(560px,92%)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-6 text-white shadow-2xl backdrop-blur-xl animate-in zoom-in-95 duration-1000 delay-300">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-orange-500/30 to-blue-500/30 border border-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                                        <Sparkles className="h-3 w-3 mr-1.5" />
                                         What should I improve?
                                     </span>
-                                    <span className="text-xs text-white/70">Docley Assist</span>
+                                    <span className="text-xs text-white/80 font-medium">Docley AI</span>
                                 </div>
-                                <p className="mt-3 text-sm leading-relaxed text-white/90">
-                                    “Your introduction is clear, but strengthen the thesis statement and add a citation to the key statistic.”
+                                <p className="mt-3 text-sm leading-relaxed text-white/95 font-medium">
+                                    "Your introduction is clear, but strengthen the thesis statement and add a citation to the key statistic."
                                 </p>
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2 text-xs text-white/80">
-                                    <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">Improve academic tone</div>
-                                    <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">Add citations to claims</div>
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2 text-xs">
+                                    <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm px-3 py-2 text-white/90 hover:bg-white/15 transition-colors">
+                                        Improve academic tone
+                                    </div>
+                                    <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm px-3 py-2 text-white/90 hover:bg-white/15 transition-colors">
+                                        Add citations to claims
+                                    </div>
                                 </div>
-                                <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
+                                <div className="mt-4 rounded-xl border border-white/15 bg-white/5 backdrop-blur-sm px-4 py-3 text-xs text-white/70">
                                     Ask anything about your assignment…
                                 </div>
                             </div>
@@ -208,6 +377,13 @@ function LifestyleHeroMock() {
 
 export default function Landing() {
     const [openFaq, setOpenFaq] = useState(0);
+    const [isVisible, setIsVisible] = useState(false);
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    useEffect(() => {
+        setIsVisible(true);
+    }, []);
 
     const bentoTopRight = useMemo(() => ([
         {
@@ -259,62 +435,112 @@ export default function Landing() {
     ]), []);
 
     return (
-        <div className="min-h-screen bg-white font-sans selection:bg-indigo-100 selection:text-indigo-900">
+        <div className={cn(
+            "min-h-screen font-sans transition-colors duration-300",
+            isDark 
+                ? "bg-slate-950 selection:bg-orange-500/30 selection:text-white" 
+                : "bg-white selection:bg-blue-200 selection:text-blue-900"
+        )}>
             <Navbar />
 
             {/* HERO */}
-            <section className="relative overflow-hidden bg-white">
-                {/* subtle, modern background (grid + soft radials) */}
+            <section className={cn(
+                "relative overflow-hidden min-h-screen flex items-center transition-colors duration-300",
+                isDark 
+                    ? "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" 
+                    : "bg-gradient-to-b from-white via-blue-50/30 to-white"
+            )}>
+                {/* Animated gradient background */}
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(59,130,246,0.14),transparent_42%),radial-gradient(circle_at_85%_20%,rgba(99,102,241,0.14),transparent_40%),radial-gradient(circle_at_50%_80%,rgba(139,92,246,0.10),transparent_46%)]" />
-                    <div className="absolute inset-0 opacity-[0.28] [background-image:linear-gradient(to_right,rgba(15,23,42,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.08)_1px,transparent_1px)] [background-size:60px_60px]" />
-                    <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white to-transparent" />
+                    {/* Large gradient orbs */}
+                    <div className={cn(
+                        "absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl animate-blob",
+                        isDark ? "bg-orange-500/20" : "bg-orange-400/10"
+                    )} />
+                    <div className={cn(
+                        "absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl animate-blob animation-delay-2000",
+                        isDark ? "bg-blue-500/20" : "bg-blue-400/10"
+                    )} />
+                    <div className={cn(
+                        "absolute bottom-0 left-1/2 w-[700px] h-[700px] rounded-full blur-3xl animate-blob animation-delay-4000",
+                        isDark ? "bg-orange-400/15" : "bg-orange-300/8"
+                    )} />
+                    
+                    {/* Grid pattern overlay */}
+                    <div className={cn(
+                        "absolute inset-0 opacity-[0.15] [background-image:linear-gradient(to_right,rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.1)_1px,transparent_1px)] [background-size:60px_60px]",
+                        isDark && "opacity-[0.15]"
+                    )} />
                 </div>
 
-                <div className="container relative mx-auto px-4 md:px-6 pt-14 pb-16 md:pt-20 md:pb-24">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
-                            <span className="inline-flex h-2 w-2 rounded-full bg-indigo-600" />
-                            Diagnostic report + upgrade workflow
+                <div className="container relative mx-auto px-4 md:px-6 pt-20 pb-16 md:pt-32 md:pb-24 z-10">
+                    <div className={cn("mx-auto max-w-4xl text-center transition-all duration-1000", isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
+                        <div className={cn(
+                            "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold backdrop-blur-md mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700",
+                            isDark 
+                                ? "border-white/10 bg-white/5 text-white/90" 
+                                : "border-blue-200 bg-white/80 text-blue-700 shadow-sm"
+                        )}>
+                            <span className="inline-flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                            <span className="bg-gradient-to-r from-orange-500 to-blue-500 bg-clip-text text-transparent">Diagnostic report + upgrade workflow</span>
                         </div>
 
-                        <h1 className="mt-6 text-4xl font-bold tracking-tight text-slate-900 md:text-6xl">
+                        <h1 className={cn(
+                            "mt-6 text-5xl font-bold tracking-tight md:text-7xl lg:text-8xl leading-tight animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100",
+                            isDark ? "text-white" : "text-slate-900"
+                        )}>
                             Upgrade your assignments to
-                            <span className="block bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 bg-clip-text text-transparent">
+                            <span className="block mt-2 bg-gradient-to-r from-orange-500 via-orange-600 to-blue-500 bg-clip-text text-transparent animate-gradient">
                                 submission-ready quality
                             </span>
                         </h1>
 
-                        <p className="mt-5 text-base text-slate-600 md:text-xl">
+                        <p className={cn(
+                            "mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200",
+                            isDark ? "text-slate-300" : "text-slate-600"
+                        )}>
                             Paste your draft, run an academic upgrade, and export a cleaner, clearer version—without losing your voice.
                         </p>
 
-                        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                            <Link to="/signup" className="w-full sm:w-auto">
-                                <Button size="lg" className="w-full sm:w-auto h-12 px-7 shadow-xl shadow-indigo-500/20">
-                                    Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
+                            <Link to="/signup" className="w-full sm:w-auto group">
+                                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-2xl shadow-orange-500/30 border-0 transition-all duration-300 hover:scale-105">
+                                    Get Started Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Button>
                             </Link>
                             <Link to="/dashboard" className="w-full sm:w-auto">
-                                <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 px-7 bg-white/70 backdrop-blur">
+                                <Button variant="outline" size="lg" className={cn(
+                                    "w-full sm:w-auto h-14 px-8 text-base font-semibold backdrop-blur-md transition-all duration-300 hover:scale-105",
+                                    isDark 
+                                        ? "bg-white/5 border-white/20 text-white hover:bg-white/10" 
+                                        : "bg-white border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm"
+                                )}>
                                     View Dashboard
                                 </Button>
                             </Link>
                         </div>
 
-                        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-600">
-                            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> No credit card</span>
-                            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Export-ready</span>
-                            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Built for university writing</span>
+                        <div className={cn(
+                            "mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-400",
+                            isDark ? "text-slate-400" : "text-slate-600"
+                        )}>
+                            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-orange-500" /> No credit card</span>
+                            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-blue-500" /> Export-ready</span>
+                            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-orange-500" /> Built for university writing</span>
                         </div>
                     </div>
 
                     {/* hero media (image + glass overlay) */}
-                    <div className="mt-12 md:mt-16">
+                    <div className={cn("mt-16 md:mt-20 transition-all duration-1000 delay-500", isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
                         <div className="relative mx-auto max-w-6xl">
-                            <div className="absolute inset-0 -z-10 rounded-[26px] bg-[radial-gradient(circle_at_25%_20%,rgba(59,130,246,0.18),transparent_58%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.14),transparent_58%)] blur-2xl" />
-                            <BrowserFrame url="docley.app/assist">
-                                <LifestyleHeroMock />
+                            <div className={cn(
+                                "absolute inset-0 -z-10 rounded-[32px] blur-3xl opacity-50 animate-pulse",
+                                isDark 
+                                    ? "bg-gradient-to-r from-orange-500/30 via-blue-500/30 to-orange-500/30" 
+                                    : "bg-gradient-to-r from-orange-400/20 via-blue-400/20 to-orange-400/20"
+                            )} />
+                            <BrowserFrame url="docley.app/assist" isDark={isDark}>
+                                <LifestyleHeroMock isDark={isDark} />
                             </BrowserFrame>
                         </div>
                     </div>
@@ -322,13 +548,27 @@ export default function Landing() {
             </section>
 
             {/* LOGO STRIP */}
-            <section className="bg-white">
-                <div className="container mx-auto px-4 md:px-6 py-10 md:py-12">
+            <section className={cn(
+                "relative py-12 md:py-16 overflow-hidden transition-colors duration-300",
+                isDark 
+                    ? "bg-gradient-to-b from-slate-950 to-slate-900" 
+                    : "bg-gradient-to-b from-white to-blue-50/30"
+            )}>
+                <div className={cn(
+                    "absolute inset-0",
+                    isDark 
+                        ? "bg-[radial-gradient(circle_at_50%_50%,rgba(249,115,22,0.1),transparent_70%)]" 
+                        : "bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_70%)]"
+                )} />
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
                     <div className="mx-auto max-w-4xl">
-                        <p className="text-center text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                        <p className={cn(
+                            "text-center text-xs font-semibold tracking-wide uppercase mb-8",
+                            isDark ? "text-slate-400" : "text-slate-500"
+                        )}>
                             Works with your workflow
                         </p>
-                        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                        <div className="flex flex-wrap items-center justify-center gap-3">
                             {[
                                 "PDF export",
                                 "Word (.docx)",
@@ -337,10 +577,16 @@ export default function Landing() {
                                 "MLA 9th",
                                 "Harvard",
                                 "Chicago",
-                            ].map((name) => (
+                            ].map((name, idx) => (
                                 <div
                                     key={name}
-                                    className="flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm"
+                                    className={cn(
+                                        "flex items-center justify-center rounded-full border backdrop-blur-sm px-5 py-2.5 text-xs font-semibold shadow-lg transition-all duration-300 hover:scale-105 animate-in fade-in slide-in-from-bottom-4",
+                                        isDark 
+                                            ? "border-white/10 bg-white/5 text-white/90 hover:bg-white/10 hover:border-white/20" 
+                                            : "border-blue-200 bg-white text-blue-700 hover:bg-blue-50 hover:border-blue-300 shadow-blue-500/10"
+                                    )}
+                                    style={{ animationDelay: `${idx * 50}ms` }}
                                 >
                                     {name}
                                 </div>
@@ -351,41 +597,64 @@ export default function Landing() {
             </section>
 
             {/* FEATURES (4-up tiles like your reference) */}
-            <section id="features" className="bg-white py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+            <section id="features" className={cn(
+                "relative py-20 md:py-32 overflow-hidden transition-colors duration-300",
+                isDark 
+                    ? "bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900" 
+                    : "bg-gradient-to-b from-white via-blue-50/20 to-white"
+            )}>
+                {/* Background effects */}
+                <div className="absolute inset-0">
+                    <div className={cn(
+                        "absolute top-1/4 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl",
+                        isDark ? "bg-blue-500/10" : "bg-blue-400/5"
+                    )} />
+                    <div className={cn(
+                        "absolute bottom-1/4 left-1/4 w-[500px] h-[500px] rounded-full blur-3xl",
+                        isDark ? "bg-orange-500/10" : "bg-orange-400/5"
+                    )} />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-3xl text-center mb-16">
+                        <h2 className={cn(
+                            "text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl animate-in fade-in slide-in-from-bottom-4 duration-700",
+                            isDark ? "text-white" : "text-slate-900"
+                        )}>
                             Built for academic submissions
                         </h2>
-                        <p className="mt-4 text-base text-slate-600 md:text-lg">
+                        <p className={cn(
+                            "mt-6 text-lg md:text-xl max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100",
+                            isDark ? "text-slate-300" : "text-slate-600"
+                        )}>
                             A focused toolkit to turn a rough draft into a cleaner, clearer, more academic version.
                         </p>
                     </div>
 
                     {/* Bento grid */}
-                    <div className="mt-10 grid gap-6 md:mt-14 lg:grid-cols-12">
+                    <div className="grid gap-6 md:gap-8 lg:grid-cols-12">
                         {/* Big card */}
-                        <div className="lg:col-span-7 lg:row-span-2">
-                            <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-sm md:p-8">
-                                <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />
-                                <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-sky-500/10 blur-3xl" />
+                        <div className="lg:col-span-7 lg:row-span-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                            <div className="relative h-full overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-xl p-6 shadow-2xl md:p-8 hover:border-white/20 transition-all duration-500">
+                                <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-orange-500/20 blur-3xl animate-pulse" />
+                                <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl animate-pulse animation-delay-2000" />
 
-                                <div className="flex items-start justify-between gap-6">
+                                <div className="flex items-start justify-between gap-6 relative z-10">
                                     <div>
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700">
-                                            <span className="inline-flex h-2 w-2 rounded-full bg-indigo-600" />
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-3 py-1.5 text-[11px] font-semibold text-white/90">
+                                            <span className="inline-flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
                                             Diagnostics → Upgrade → Export
                                         </div>
-                                        <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-                                            See what’s wrong, then fix it in one run
+                                        <h3 className="mt-5 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                                            See what's wrong, then fix it in one run
                                         </h3>
-                                        <p className="mt-3 max-w-[60ch] text-sm text-slate-600 leading-relaxed md:text-base">
+                                        <p className="mt-3 max-w-[60ch] text-sm text-slate-300 leading-relaxed md:text-base">
                                             Get a quick diagnostic report (tone, structure, clarity), apply improvements, and keep editing in your own words.
                                         </p>
 
                                         <div className="mt-6 flex flex-wrap gap-2 text-xs">
                                             {["Tone", "Structure", "Clarity", "Citations"].map((chip) => (
-                                                <span key={chip} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
+                                                <span key={chip} className="rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-3 py-1.5 text-white/90 hover:bg-white/15 transition-colors">
                                                     {chip}
                                                 </span>
                                             ))}
@@ -393,18 +662,18 @@ export default function Landing() {
                                     </div>
 
                                     <div className="hidden md:block">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-blue-500 text-white shadow-lg shadow-orange-500/30 animate-pulse">
                                             <Sparkles className="h-6 w-6" />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="mt-8 grid gap-4 md:grid-cols-2">
+                                <div className="mt-8 grid gap-4 md:grid-cols-2 relative z-10">
                                     {/* mini diagnostic UI */}
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 hover:bg-white/10 transition-all duration-300">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-sm font-semibold text-slate-900">Diagnostic Report</div>
-                                            <div className="text-xs font-bold text-indigo-700">B+</div>
+                                            <div className="text-sm font-semibold text-white">Diagnostic Report</div>
+                                            <div className="text-xs font-bold text-orange-400">B+</div>
                                         </div>
 
                                         <div className="mt-4 space-y-3">
@@ -414,13 +683,13 @@ export default function Landing() {
                                                 { label: "Clarity", value: 90 },
                                             ].map((row) => (
                                                 <div key={row.label}>
-                                                    <div className="flex items-center justify-between text-xs text-slate-600">
+                                                    <div className="flex items-center justify-between text-xs text-slate-300">
                                                         <span>{row.label}</span>
-                                                        <span className="font-semibold text-slate-900">{row.value}/100</span>
+                                                        <span className="font-semibold text-white">{row.value}/100</span>
                                                     </div>
-                                                    <div className="mt-1 h-2 w-full rounded-full bg-slate-100">
+                                                    <div className="mt-1 h-2 w-full rounded-full bg-white/10">
                                                         <div
-                                                            className="h-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600"
+                                                            className="h-2 rounded-full bg-gradient-to-r from-orange-500 to-blue-500"
                                                             style={{ width: `${row.value}%` }}
                                                         />
                                                     </div>
@@ -428,29 +697,29 @@ export default function Landing() {
                                             ))}
                                         </div>
 
-                                        <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-                                            <span className="font-semibold text-slate-900">Next:</span> Replace informal phrases and strengthen topic sentences.
+                                        <div className="mt-4 rounded-xl bg-white/5 backdrop-blur-sm p-3 text-xs text-slate-300 border border-white/10">
+                                            <span className="font-semibold text-white">Next:</span> Replace informal phrases and strengthen topic sentences.
                                         </div>
                                     </div>
 
                                     {/* mini before/after */}
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 hover:bg-white/10 transition-all duration-300">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-sm font-semibold text-slate-900">Before → After</div>
-                                            <div className="text-xs text-slate-500">Preview</div>
+                                            <div className="text-sm font-semibold text-white">Before → After</div>
+                                            <div className="text-xs text-slate-400">Preview</div>
                                         </div>
 
                                         <div className="mt-4 space-y-3">
-                                            <div className="rounded-xl border border-red-100 bg-red-50/40 p-3 text-xs text-slate-700">
-                                                “This shows the economy is bad and people can’t buy stuff...”
+                                            <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-sm p-3 text-xs text-red-200">
+                                                "This shows the economy is bad and people can't buy stuff..."
                                             </div>
-                                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-xs text-slate-800">
-                                                “These findings indicate inflationary pressure has reduced consumer purchasing power...”
+                                            <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 backdrop-blur-sm p-3 text-xs text-blue-200">
+                                                "These findings indicate inflationary pressure has reduced consumer purchasing power..."
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 flex items-center gap-2 text-xs text-slate-600">
-                                            <Check className="h-4 w-4 text-green-600" />
+                                        <div className="mt-4 flex items-center gap-2 text-xs text-slate-300">
+                                            <Check className="h-4 w-4 text-green-400" />
                                             Keeps your intent; improves academic register.
                                         </div>
                                     </div>
@@ -459,49 +728,49 @@ export default function Landing() {
                         </div>
 
                         {/* Top-right supporting cards */}
-                        {bentoTopRight.map((item) => (
-                            <div key={item.title} className="lg:col-span-5">
-                                <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
-                                    <div className={cn("pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-30", `bg-gradient-to-br ${item.accent}`)} />
+                        {bentoTopRight.map((item, idx) => (
+                            <div key={item.title} className={`lg:col-span-5 animate-in fade-in slide-in-from-bottom-8 duration-1000`} style={{ animationDelay: `${300 + idx * 100}ms` }}>
+                                <div className="relative h-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl md:p-7 hover:border-white/20 hover:bg-white/10 transition-all duration-500">
+                                    <div className={cn("pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-30 animate-pulse", `bg-gradient-to-br ${item.accent === "from-blue-600 to-violet-600" ? "from-orange-500 to-blue-500" : "from-blue-500 to-orange-500"}`)} />
 
-                                    <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start justify-between gap-4 relative z-10">
                                         <div>
-                                            <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-                                            <p className="mt-2 text-sm text-slate-600 leading-relaxed">{item.description}</p>
+                                            <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                                            <p className="mt-2 text-sm text-slate-300 leading-relaxed">{item.description}</p>
                                         </div>
-                                        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-md", `bg-gradient-to-br ${item.accent}`)}>
+                                        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-lg", item.accent === "from-blue-600 to-violet-600" ? "bg-gradient-to-br from-orange-500 to-blue-500" : "bg-gradient-to-br from-blue-500 to-orange-500")}>
                                             <item.icon className="h-5 w-5" />
                                         </div>
                                     </div>
 
-                                    <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-600">
+                                    <div className="mt-6 flex flex-wrap gap-2 text-xs">
                                         {item.chips.map((chip) => (
-                                            <span key={chip} className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                            <span key={chip} className="rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-3 py-1.5 text-white/90 hover:bg-white/15 transition-colors">
                                                 {chip}
                                             </span>
                                         ))}
                                     </div>
 
-                                    <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4">
+                                    <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
                                         {item.title === "Rewrite with academic tone" ? (
-                                            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700">
-                                                <div className="font-semibold text-slate-900">Example upgrade</div>
+                                            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3 text-xs">
+                                                <div className="font-semibold text-white">Example upgrade</div>
                                                 <div className="mt-2 space-y-2">
-                                                    <div className="rounded-lg border border-red-100 bg-red-50/40 p-2">
-                                                        “I think this is a big problem for society.”
+                                                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 backdrop-blur-sm p-2 text-red-200">
+                                                        "I think this is a big problem for society."
                                                     </div>
-                                                    <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-2">
-                                                        “These findings indicate significant societal implications.”
+                                                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 backdrop-blur-sm p-2 text-blue-200">
+                                                        "These findings indicate significant societal implications."
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700">
-                                                <div className="font-semibold text-slate-900">What you control</div>
-                                                <ul className="mt-2 space-y-2 text-slate-600">
-                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Your topic and sources</li>
-                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Your thesis and argument</li>
-                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Final edits before export</li>
+                                            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3 text-xs">
+                                                <div className="font-semibold text-white">What you control</div>
+                                                <ul className="mt-2 space-y-2 text-slate-300">
+                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Your topic and sources</li>
+                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Your thesis and argument</li>
+                                                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Final edits before export</li>
                                                 </ul>
                                             </div>
                                         )}
@@ -511,54 +780,54 @@ export default function Landing() {
                         ))}
 
                         {/* Bottom row */}
-                        {bentoBottom.map((b) => (
-                            <div key={b.title} className="lg:col-span-4">
-                                <Card className="h-full overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        {bentoBottom.map((b, idx) => (
+                            <div key={b.title} className={`lg:col-span-4 animate-in fade-in slide-in-from-bottom-8 duration-1000`} style={{ animationDelay: `${500 + idx * 100}ms` }}>
+                                <div className="h-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl hover:border-white/20 hover:bg-white/10 transition-all duration-500">
                                     <div className="p-6">
                                         <div className="flex items-start justify-between gap-4">
                                             <div>
-                                                <h3 className="text-base font-semibold text-slate-900">{b.title}</h3>
-                                                <p className="mt-2 text-sm text-slate-600 leading-relaxed">{b.description}</p>
+                                                <h3 className="text-base font-semibold text-white">{b.title}</h3>
+                                                <p className="mt-2 text-sm text-slate-300 leading-relaxed">{b.description}</p>
                                             </div>
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-sm">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-blue-500 text-white shadow-lg">
                                                 <b.icon className="h-5 w-5" />
                                             </div>
                                         </div>
                                         {b.title === "Structure & flow" && (
-                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                                <div className="text-[11px] font-semibold text-slate-700">Suggested outline</div>
+                                            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+                                                <div className="text-[11px] font-semibold text-white">Suggested outline</div>
                                                 <div className="mt-3 space-y-2">
                                                     {["Thesis statement", "Argument 1 → evidence", "Argument 2 → evidence"].map((row) => (
-                                                        <div key={row} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                                                        <div key={row} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors">
                                                             <span>{row}</span>
-                                                            <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                                                            <span className="h-2 w-2 rounded-full bg-orange-500" />
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
                                         {b.title === "Citation awareness" && (
-                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-semibold text-slate-700">Citation checks</span>
-                                                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">2 missing</span>
+                                                    <span className="text-[11px] font-semibold text-white">Citation checks</span>
+                                                    <span className="rounded-full border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-orange-300">2 missing</span>
                                                 </div>
                                                 <div className="mt-3 space-y-2">
-                                                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                                                        “Factual claim” <span className="font-semibold text-amber-700">needs citation</span>
+                                                    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300">
+                                                        "Factual claim" <span className="font-semibold text-orange-400">needs citation</span>
                                                     </div>
-                                                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                                                        Reference list <span className="font-semibold text-indigo-700">style: APA</span>
+                                                    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300">
+                                                        Reference list <span className="font-semibold text-blue-400">style: APA</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
                                         {b.title === "Export-ready output" && (
-                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                                <div className="text-[11px] font-semibold text-slate-700">Export</div>
+                                            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+                                                <div className="text-[11px] font-semibold text-white">Export</div>
                                                 <div className="mt-3 grid gap-2">
                                                     {["PDF Document", "Word (.docx)", "Plain Text"].map((row) => (
-                                                        <div key={row} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                                                        <div key={row} className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors">
                                                             {row}
                                                         </div>
                                                     ))}
@@ -566,7 +835,7 @@ export default function Landing() {
                                             </div>
                                         )}
                                     </div>
-                                </Card>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -574,43 +843,47 @@ export default function Landing() {
             </section>
 
             {/* STEPS */}
-            <section className="bg-slate-50 py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Assignment upgrades in 3 steps</h2>
-                        <p className="mt-4 text-base text-slate-600 md:text-lg">
+            <section className="relative bg-gradient-to-b from-slate-900 to-slate-950 py-20 md:py-32 overflow-hidden">
+                <div className="absolute inset-0">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/5 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-3xl text-center mb-16">
+                        <h2 className="text-4xl font-bold tracking-tight text-white md:text-5xl animate-in fade-in slide-in-from-bottom-4 duration-700">Assignment upgrades in 3 steps</h2>
+                        <p className="mt-6 text-lg text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
                             A short, focused flow designed to get you to a better submission fast.
                         </p>
                     </div>
 
                     <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-3">
                         {steps.map((s, idx) => (
-                            <Card key={s.title} className="border-slate-200 bg-white">
+                            <div key={s.title} className={`rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl hover:border-white/20 hover:bg-white/10 transition-all duration-500 animate-in fade-in slide-in-from-bottom-8`} style={{ animationDelay: `${200 + idx * 100}ms` }}>
                                 <div className="p-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-blue-500 text-white border border-white/20 font-bold shadow-lg">
                                             {idx + 1}
                                         </div>
-                                        <div className="text-base font-semibold text-slate-900">{s.title}</div>
+                                        <div className="text-base font-semibold text-white">{s.title}</div>
                                     </div>
-                                    <p className="mt-3 text-sm text-slate-600 leading-relaxed">{s.description}</p>
+                                    <p className="mt-3 text-sm text-slate-300 leading-relaxed">{s.description}</p>
 
                                     {/* mini UI previews */}
                                     {idx === 0 && (
-                                        <div className="mt-5 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
+                                        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
                                             <div className="space-y-2">
-                                                <div className="h-8 rounded-lg border border-slate-200 bg-white px-3 flex items-center text-xs text-slate-500">
+                                                <div className="h-8 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 flex items-center text-xs text-slate-400">
                                                     Document title…
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2">
-                                                    <div className="h-8 rounded-lg border border-slate-200 bg-white px-3 flex items-center text-xs text-slate-500">
+                                                    <div className="h-8 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 flex items-center text-xs text-slate-400">
                                                         Type: Essay
                                                     </div>
-                                                    <div className="h-8 rounded-lg border border-slate-200 bg-white px-3 flex items-center text-xs text-slate-500">
+                                                    <div className="h-8 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 flex items-center text-xs text-slate-400">
                                                         Level: UG
                                                     </div>
                                                 </div>
-                                                <div className="h-8 rounded-lg border border-slate-200 bg-white px-3 flex items-center text-xs text-slate-500">
+                                                <div className="h-8 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 flex items-center text-xs text-slate-400">
                                                     Style: APA 7th
                                                 </div>
                                             </div>
@@ -618,15 +891,15 @@ export default function Landing() {
                                     )}
 
                                     {idx === 1 && (
-                                        <div className="mt-5 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
-                                            <div className="rounded-xl border border-slate-200 bg-white p-3">
-                                                <div className="h-2 w-24 rounded bg-slate-200" />
+                                        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+                                            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3">
+                                                <div className="h-2 w-24 rounded bg-white/20" />
                                                 <div className="mt-3 space-y-2">
-                                                    <div className="h-2 w-full rounded bg-slate-100" />
-                                                    <div className="h-2 w-[92%] rounded bg-slate-100" />
-                                                    <div className="h-2 w-[80%] rounded bg-slate-100" />
+                                                    <div className="h-2 w-full rounded bg-white/10" />
+                                                    <div className="h-2 w-[92%] rounded bg-white/10" />
+                                                    <div className="h-2 w-[80%] rounded bg-white/10" />
                                                 </div>
-                                                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                                                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm px-3 py-1 text-[11px] font-semibold text-orange-300">
                                                     Highlight: informal phrase
                                                 </div>
                                             </div>
@@ -634,70 +907,74 @@ export default function Landing() {
                                     )}
 
                                     {idx === 2 && (
-                                        <div className="mt-5 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
-                                            <div className="rounded-xl border border-slate-200 bg-white p-3">
+                                        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+                                            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3">
                                                 <div className="flex items-center justify-between">
-                                                    <div className="text-xs font-semibold text-slate-900">Export</div>
-                                                    <div className="text-[11px] text-slate-500">Choose format</div>
+                                                    <div className="text-xs font-semibold text-white">Export</div>
+                                                    <div className="text-[11px] text-slate-400">Choose format</div>
                                                 </div>
                                                 <div className="mt-3 grid gap-2">
-                                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">PDF Document</div>
-                                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">Word (.docx)</div>
-                                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">Plain Text</div>
+                                                    <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors">PDF Document</div>
+                                                    <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors">Word (.docx)</div>
+                                                    <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors">Plain Text</div>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                            </Card>
+                            </div>
                         ))}
                     </div>
                 </div>
             </section>
 
             {/* INTEGRITY / COMPARISON (clean table style) */}
-            <section className="bg-white py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
+            <section className="relative bg-gradient-to-b from-slate-950 to-slate-900 py-20 md:py-32 overflow-hidden">
+                <div className="absolute inset-0">
+                    <div className="absolute top-1/2 right-1/4 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
                     <div className="grid items-start gap-10 lg:grid-cols-12">
-                        <div className="lg:col-span-5">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                                <ShieldCheck className="h-4 w-4 text-indigo-700" />
+                        <div className="lg:col-span-5 animate-in fade-in slide-in-from-left-8 duration-1000">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-white/90">
+                                <ShieldCheck className="h-4 w-4 text-orange-400" />
                                 Integrity-first
                             </div>
-                            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+                            <h2 className="mt-5 text-3xl font-bold tracking-tight text-white md:text-4xl lg:text-5xl">
                                 No generic essays.
-                                <span className="block">Transform your own work.</span>
+                                <span className="block mt-2">Transform your own work.</span>
                             </h2>
-                            <p className="mt-4 text-base text-slate-600 md:text-lg">
+                            <p className="mt-5 text-base text-slate-300 md:text-lg">
                                 Improve structure, tone, and clarity while keeping your thesis, sources, and ideas intact.
                             </p>
 
-                            <div className="mt-6 space-y-3 text-sm text-slate-700">
+                            <div className="mt-6 space-y-3 text-sm text-slate-300">
                                 {[
                                     "You provide the content; we improve the academic register.",
                                     "Clear diagnostics explain what changed and why.",
-                                    "Export when you’re ready to submit.",
-                                ].map((t) => (
-                                    <div key={t} className="flex items-start gap-3">
-                                        <Check className="mt-0.5 h-4 w-4 text-green-600" />
+                                    "Export when you're ready to submit.",
+                                ].map((t, idx) => (
+                                    <div key={t} className="flex items-start gap-3 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: `${idx * 100}ms` }}>
+                                        <Check className="mt-0.5 h-4 w-4 text-green-400 flex-shrink-0" />
                                         <span>{t}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="lg:col-span-7">
-                            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                                <div className="grid grid-cols-2 border-b border-slate-200">
-                                    <div className="px-6 py-4 text-sm font-semibold text-slate-900 bg-slate-50">
+                        <div className="lg:col-span-7 animate-in fade-in slide-in-from-right-8 duration-1000 delay-200">
+                            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+                                <div className="grid grid-cols-2 border-b border-white/10">
+                                    <div className="px-6 py-4 text-sm font-semibold text-white/70 bg-white/5">
                                         Generic AI writers
                                     </div>
-                                    <div className="px-6 py-4 text-sm font-semibold text-indigo-900 bg-indigo-50/40">
+                                    <div className="px-6 py-4 text-sm font-semibold text-white bg-gradient-to-r from-orange-500/20 to-blue-500/20">
                                         Docley
                                     </div>
                                 </div>
 
-                                <div className="divide-y divide-slate-200">
+                                <div className="divide-y divide-white/10">
                                     {[
                                         { label: "Preserves your meaning", left: false, right: true },
                                         { label: "Improves academic tone", left: true, right: true },
@@ -705,39 +982,39 @@ export default function Landing() {
                                         { label: "Export workflow built-in", left: false, right: true },
                                     ].map((row) => (
                                         <div key={row.label} className="grid grid-cols-2">
-                                            <div className="px-6 py-4 text-sm text-slate-700 flex items-center justify-between gap-3">
+                                            <div className="px-6 py-4 text-sm text-slate-300 flex items-center justify-between gap-3">
                                                 <span className="min-w-0">{row.label}</span>
                                                 {row.left ? (
-                                                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                                    <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
                                                 ) : (
-                                                    <X className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                                    <X className="h-4 w-4 text-slate-500 flex-shrink-0" />
                                                 )}
                                             </div>
-                                            <div className="px-6 py-4 text-sm text-slate-700 flex items-center justify-between gap-3 bg-white">
+                                            <div className="px-6 py-4 text-sm text-slate-300 flex items-center justify-between gap-3 bg-white/5">
                                                 <span className="min-w-0">{row.label}</span>
                                                 {row.right ? (
-                                                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                                    <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
                                                 ) : (
-                                                    <X className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                                    <X className="h-4 w-4 text-slate-500 flex-shrink-0" />
                                                 )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-3 border-t border-slate-200 bg-slate-50 p-5 md:grid-cols-2">
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                        <div className="text-xs font-semibold text-slate-900">What you control</div>
-                                        <div className="mt-2 space-y-2 text-xs text-slate-600">
-                                            <div className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Topic, thesis, and structure</div>
-                                            <div className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Sources and citations</div>
+                                <div className="grid grid-cols-1 gap-3 border-t border-white/10 bg-white/5 p-5 md:grid-cols-2">
+                                    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+                                        <div className="text-xs font-semibold text-white">What you control</div>
+                                        <div className="mt-2 space-y-2 text-xs text-slate-300">
+                                            <div className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Topic, thesis, and structure</div>
+                                            <div className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Sources and citations</div>
                                         </div>
                                     </div>
-                                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
-                                        <div className="text-xs font-semibold text-indigo-900">What Docley improves</div>
-                                        <div className="mt-2 space-y-2 text-xs text-indigo-900/90">
-                                            <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-indigo-700" /> Academic tone and clarity</div>
-                                            <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-indigo-700" /> Actionable diagnostics</div>
+                                    <div className="rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-blue-500/10 backdrop-blur-sm p-4">
+                                        <div className="text-xs font-semibold text-white">What Docley improves</div>
+                                        <div className="mt-2 space-y-2 text-xs text-slate-300">
+                                            <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-orange-400" /> Academic tone and clarity</div>
+                                            <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-blue-400" /> Actionable diagnostics</div>
                                         </div>
                                     </div>
                                 </div>
@@ -748,35 +1025,39 @@ export default function Landing() {
             </section>
 
             {/* METRICS */}
-            <section className="bg-slate-50 py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Clear diagnostics, not guesswork</h2>
-                        <p className="mt-4 text-base text-slate-600 md:text-lg">
-                            A report that’s easy to understand and easy to act on.
+            <section className="relative bg-gradient-to-b from-slate-900 to-slate-950 py-20 md:py-32 overflow-hidden">
+                <div className="absolute inset-0">
+                    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-3xl text-center mb-16">
+                        <h2 className="text-4xl font-bold tracking-tight text-white md:text-5xl animate-in fade-in slide-in-from-bottom-4 duration-700">Clear diagnostics, not guesswork</h2>
+                        <p className="mt-6 text-lg text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+                            A report that's easy to understand and easy to act on.
                         </p>
                     </div>
 
                     <div className="mx-auto mt-10 max-w-5xl md:mt-14">
-                        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-                            <div className="grid divide-y divide-slate-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+                        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-1000 delay-200">
+                            <div className="grid divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
                                 {[
                                     { label: "Diagnostic categories", value: "4", note: "Tone, structure, clarity, citations" },
                                     { label: "Citation styles", value: "4", note: "APA, MLA, Harvard, Chicago" },
                                     { label: "Export formats", value: "3", note: "PDF, Word (.docx), plain text" },
-                                ].map((m) => (
-                                    <div key={m.label} className="p-6">
-                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{m.label}</div>
-                                        <div className="mt-3 flex items-baseline gap-2">
-                                            <div className="text-4xl font-bold tracking-tight text-slate-900">{m.value}</div>
-                                            <div className="text-sm font-semibold text-slate-700">core</div>
+                                ].map((m, idx) => (
+                                    <div key={m.label} className={`p-8 animate-in fade-in slide-in-from-bottom-4 duration-700`} style={{ animationDelay: `${300 + idx * 100}ms` }}>
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{m.label}</div>
+                                        <div className="mt-4 flex items-baseline gap-2">
+                                            <div className="text-5xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-blue-400 bg-clip-text text-transparent">{m.value}</div>
+                                            <div className="text-sm font-semibold text-slate-400">core</div>
                                         </div>
-                                        <div className="mt-2 text-sm text-slate-600">{m.note}</div>
+                                        <div className="mt-3 text-sm text-slate-300">{m.note}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <p className="mt-4 text-center text-xs text-slate-500">
+                        <p className="mt-6 text-center text-sm text-slate-400 animate-in fade-in duration-700 delay-600">
                             Designed to be simple, fast, and clear—so students know exactly what to improve.
                         </p>
                     </div>
@@ -784,20 +1065,25 @@ export default function Landing() {
             </section>
 
             {/* PRODUCT PREVIEW (moved down as requested) */}
-            <section className="bg-white py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">See the editor in action</h2>
-                        <p className="mt-4 text-base text-slate-600 md:text-lg">
+            <section className="relative bg-gradient-to-b from-slate-950 to-slate-900 py-20 md:py-32 overflow-hidden">
+                <div className="absolute inset-0">
+                    <div className="absolute top-1/2 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-3xl text-center mb-16">
+                        <h2 className="text-4xl font-bold tracking-tight text-white md:text-5xl animate-in fade-in slide-in-from-bottom-4 duration-700">See the editor in action</h2>
+                        <p className="mt-6 text-lg text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
                             A quick look at the workspace: write, run diagnostics, apply upgrades, and export.
                         </p>
                     </div>
 
-                    <div className="mt-10 md:mt-14">
+                    <div className="mt-10 md:mt-14 animate-in fade-in zoom-in-95 duration-1000 delay-200">
                         <div className="relative mx-auto max-w-6xl">
-                            <div className="absolute inset-0 -z-10 rounded-[26px] bg-[radial-gradient(circle_at_25%_20%,rgba(59,130,246,0.14),transparent_58%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.10),transparent_58%)] blur-2xl" />
-                            <BrowserFrame url="docley.app/dashboard/editor">
-                                <ProductUIMock />
+                            <div className="absolute inset-0 -z-10 rounded-[32px] bg-gradient-to-r from-orange-500/30 via-blue-500/30 to-orange-500/30 blur-3xl opacity-50 animate-pulse" />
+                            <BrowserFrame url="docley.app/dashboard/editor" isDark={isDark}>
+                                <ProductUIMock isDark={isDark} />
                             </BrowserFrame>
                         </div>
                     </div>
@@ -805,56 +1091,63 @@ export default function Landing() {
             </section>
 
             {/* FAQ */}
-            <section className="bg-white py-16 md:py-24">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Frequently asked questions</h2>
-                        <p className="mt-4 text-base text-slate-600 md:text-lg">
+            <section className="relative bg-gradient-to-b from-slate-900 to-slate-950 py-20 md:py-32 overflow-hidden">
+                <div className="absolute inset-0">
+                    <div className="absolute top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-orange-500/5 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-3xl text-center mb-16">
+                        <h2 className="text-4xl font-bold tracking-tight text-white md:text-5xl animate-in fade-in slide-in-from-bottom-4 duration-700">Frequently asked questions</h2>
+                        <p className="mt-6 text-lg text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
                             Quick answers to the most common questions.
                         </p>
                     </div>
 
                     <div className="mx-auto mt-10 max-w-3xl space-y-3 md:mt-14">
                         {faq.map((item, idx) => (
-                            <FAQItem
-                                key={item.q}
-                                item={item}
-                                isOpen={openFaq === idx}
-                                onToggle={() => setOpenFaq(openFaq === idx ? -1 : idx)}
-                            />
+                            <div key={item.q} className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${200 + idx * 50}ms` }}>
+                                <FAQItem
+                                    item={item}
+                                    isOpen={openFaq === idx}
+                                    onToggle={() => setOpenFaq(openFaq === idx ? -1 : idx)}
+                                    isDark={isDark}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
             </section>
 
             {/* FINAL CTA */}
-            <section className="relative overflow-hidden bg-gradient-to-b from-white to-indigo-50 py-16 md:py-24">
+            <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-20 md:py-32">
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute -bottom-40 right-[-10%] h-[520px] w-[520px] rounded-full bg-indigo-400/25 blur-3xl" />
-                    <div className="absolute -bottom-32 left-[-15%] h-[560px] w-[560px] rounded-full bg-sky-400/20 blur-3xl" />
+                    <div className="absolute top-0 right-[-10%] h-[600px] w-[600px] rounded-full bg-orange-500/20 blur-3xl animate-blob" />
+                    <div className="absolute bottom-0 left-[-15%] h-[700px] w-[700px] rounded-full bg-blue-500/20 blur-3xl animate-blob animation-delay-2000" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-orange-400/10 blur-3xl animate-blob animation-delay-4000" />
                 </div>
 
-                <div className="container relative mx-auto px-4 md:px-6">
-                    <div className="mx-auto max-w-4xl rounded-3xl border border-white/60 bg-white/70 p-8 text-center shadow-xl shadow-slate-900/10 backdrop-blur md:p-12">
-                        <h3 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+                <div className="container relative mx-auto px-4 md:px-6 z-10">
+                    <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8 text-center shadow-2xl md:p-12 animate-in fade-in zoom-in-95 duration-1000">
+                        <h3 className="text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-6xl">
                             Ready to upgrade your next assignment?
                         </h3>
-                        <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 md:text-lg">
+                        <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300 md:text-xl">
                             Create a document, run diagnostics, and refine your work into a cleaner, more academic submission.
                         </p>
-                        <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                            <Link to="/signup" className="w-full sm:w-auto">
-                                <Button size="lg" className="w-full sm:w-auto h-12 px-8 shadow-xl shadow-indigo-500/20">
-                                    Start Free <ArrowRight className="ml-2 h-4 w-4" />
+                        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                            <Link to="/signup" className="w-full sm:w-auto group">
+                                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-2xl shadow-orange-500/30 border-0 transition-all duration-300 hover:scale-105">
+                                    Start Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Button>
                             </Link>
                             <Link to="/pricing" className="w-full sm:w-auto">
-                                <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 px-8 bg-white/70">
+                                <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/10 backdrop-blur-md transition-all duration-300 hover:scale-105">
                                     View Pricing
                                 </Button>
                             </Link>
                         </div>
-                        <p className="mt-5 text-xs text-slate-500">No credit card required. Cancel anytime.</p>
+                        <p className="mt-6 text-sm text-slate-400">No credit card required. Cancel anytime.</p>
                     </div>
                 </div>
             </section>
