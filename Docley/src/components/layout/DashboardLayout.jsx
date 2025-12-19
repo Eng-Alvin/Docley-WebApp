@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import {
@@ -8,20 +8,26 @@ import {
     Settings,
     Menu,
     X,
-    Plus,
     LogOut,
-    MessageSquarePlus,
-    ChevronLeft,
-    ChevronRight,
+    Sparkles,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { OnboardingFlow, isOnboardingCompleted } from '../onboarding/OnboardingFlow';
 
 export function DashboardLayout() {
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const navigate = useNavigate();
     const { addToast } = useToast();
+
+    // Check onboarding on mount
+    useEffect(() => {
+        if (!isOnboardingCompleted()) {
+            setShowOnboarding(true);
+        }
+    }, []);
 
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -35,64 +41,82 @@ export function DashboardLayout() {
     };
 
     const handleSignOut = () => {
-        addToast("Signing out...", "info");
+        addToast('Signing out...', 'info');
         setTimeout(() => {
-            addToast("Successfully signed out", "success");
+            addToast('Successfully signed out', 'success');
             navigate('/login');
         }, 1000);
     };
 
-    const handleFeedback = () => {
-        addToast("Thanks for your feedback! We'll look into it.", "success");
+    const handleOnboardingComplete = () => {
+        setShowOnboarding(false);
     };
 
+    // Sidebar is collapsed by default, expands on hover
+    const isCollapsed = !isHovered;
+
     return (
-        <div className="min-h-screen bg-slate-50 flex">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex">
+            {/* Onboarding Flow */}
+            {showOnboarding && <OnboardingFlow onComplete={handleOnboardingComplete} />}
+
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden"
+                    className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
 
-            {/* Mobile Menu Button - Fixed */}
+            {/* Mobile Menu Button */}
             <div className="lg:hidden fixed top-4 left-4 z-50">
-                <Button variant="outline" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="bg-white shadow-lg border-slate-200"
+                >
                     {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </Button>
             </div>
 
-            {/* Sidebar */}
-            <aside className={cn(
-                "fixed inset-y-0 left-0 z-40 bg-slate-50 border-r border-slate-200 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen flex flex-col",
-                isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full",
-                isCollapsed ? "lg:w-[60px]" : "lg:w-[240px]"
-            )}>
-                {/* Logo & Toggle */}
-                <div className={cn("h-14 flex items-center border-b border-slate-200 transition-all duration-300 relative", isCollapsed ? "justify-center px-0" : "justify-between px-4")}>
-                    <Link to="/" className="flex items-center gap-2 overflow-hidden">
-                        <div className="bg-indigo-600 text-white p-1 rounded-md flex-shrink-0">
-                            <FileText className="h-5 w-5" />
+            {/* Sidebar - Fixed position, auto-collapse with hover expand */}
+            <aside
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={cn(
+                    'fixed inset-y-0 left-0 z-30 bg-white border-r border-slate-200 flex flex-col shadow-lg transition-all duration-300 ease-in-out',
+                    // Mobile: hidden by default, shown when menu is open
+                    isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full',
+                    // Desktop: always visible, collapsed by default, expands on hover
+                    'lg:translate-x-0',
+                    isCollapsed ? 'lg:w-[70px]' : 'lg:w-[260px]'
+                )}
+            >
+                {/* Logo */}
+                <div
+                    className={cn(
+                        'h-16 flex items-center border-b border-slate-200 transition-all duration-300 relative bg-gradient-to-r from-white to-indigo-50/30',
+                        isCollapsed ? 'justify-center px-0' : 'justify-center px-5'
+                    )}
+                >
+                    <Link to="/" className="flex items-center gap-3 overflow-hidden">
+                        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-2 rounded-lg flex-shrink-0 shadow-lg shadow-indigo-500/25">
+                            <Sparkles className="h-5 w-5" />
                         </div>
                         {!isCollapsed && (
-                            <span className="font-semibold text-slate-900 tracking-tight whitespace-nowrap animate-in fade-in duration-300">Docley</span>
+                            <div className="flex flex-col animate-in fade-in duration-200">
+                                <span className="font-bold text-slate-900 tracking-tight whitespace-nowrap text-lg">
+                                    Docley
+                                </span>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Academic Transformer</span>
+                            </div>
                         )}
                     </Link>
-
-                    {/* Toggle Button - Only visible on desktop */}
-                    {!isCollapsed && (
-                        <button
-                            onClick={() => setIsCollapsed(true)}
-                            className="hidden lg:flex text-slate-400 hover:text-slate-600 transition-colors p-1 rounded hover:bg-slate-200"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                    )}
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-2 space-y-1 mt-4 overflow-x-hidden overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 px-3 py-4 space-y-1 mt-2 overflow-x-hidden overflow-y-auto custom-scrollbar">
                     {navigation.map((item) => (
                         <Link
                             key={item.name}
@@ -100,25 +124,29 @@ export function DashboardLayout() {
                             onClick={() => setIsMobileMenuOpen(false)}
                             title={isCollapsed ? item.name : undefined}
                             className={cn(
-                                "flex items-center py-2 rounded-md transition-all duration-200 group relative min-h-[40px]",
-                                isCollapsed ? "justify-center px-0" : "px-3",
+                                'flex items-center py-2.5 rounded-lg transition-all duration-200 group relative min-h-[44px]',
+                                isCollapsed ? 'justify-center px-0' : 'px-3',
                                 isActive(item.href)
-                                    ? "bg-white text-indigo-600 shadow-sm border border-slate-200"
-                                    : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-50/50 text-indigo-700 shadow-sm border border-indigo-100'
+                                    : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900'
                             )}
                         >
-                            <item.icon className={cn(
-                                "h-5 w-5 flex-shrink-0 transition-colors",
-                                isActive(item.href) ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600",
-                                !isCollapsed && "mr-3"
-                            )} />
+                            <item.icon
+                                className={cn(
+                                    'h-5 w-5 flex-shrink-0 transition-colors',
+                                    isActive(item.href) ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600',
+                                    !isCollapsed && 'mr-3'
+                                )}
+                            />
                             {!isCollapsed && (
-                                <span className="whitespace-nowrap animate-in fade-in duration-200 text-sm font-medium">{item.name}</span>
+                                <span className="whitespace-nowrap animate-in fade-in duration-200 text-sm font-medium">
+                                    {item.name}
+                                </span>
                             )}
 
                             {/* Hover Tooltip for Collapsed State */}
                             {isCollapsed && (
-                                <div className="fixed left-[70px] bg-slate-900 text-white text-xs px-2 py-1.5 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[60] pointer-events-none translate-y-[-50%] top-auto">
+                                <div className="fixed left-[80px] bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[60] pointer-events-none">
                                     {item.name}
                                 </div>
                             )}
@@ -127,26 +155,25 @@ export function DashboardLayout() {
                 </nav>
 
                 {/* Bottom Sidebar */}
-                <div className="p-2 space-y-2 border-t border-slate-200 bg-slate-50/50">
-                    {/* Expand Button when collapsed */}
-                    {isCollapsed && (
-                        <button
-                            onClick={() => setIsCollapsed(false)}
-                            className="w-full flex justify-center p-2 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
-                    )}
-
+                <div className="p-3 space-y-2 border-t border-slate-200 bg-gradient-to-b from-white to-slate-50/50">
                     {/* Usage Stats (Hidden when collapsed) */}
                     {!isCollapsed && (
-                        <div className="px-2 py-3 bg-white border border-slate-100 rounded-lg shadow-sm mb-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-900 mb-1.5">
+                        <div className="px-3 py-3 bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-xl shadow-sm mb-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex items-center justify-between text-xs font-semibold text-slate-900 mb-2">
                                 <span>Free Plan</span>
-                                <Link to="/pricing" className="text-indigo-600 hover:underline">Upgrade</Link>
+                                <Link
+                                    to="/pricing"
+                                    className="text-indigo-600 hover:text-indigo-700 hover:underline text-xs font-medium"
+                                >
+                                    Upgrade
+                                </Link>
                             </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full w-1/3 bg-indigo-500 rounded-full"></div>
+                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full" style={{ width: '33%' }}></div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500">
+                                <span>1 / 3 documents</span>
+                                <span>This month</span>
                             </div>
                         </div>
                     )}
@@ -154,32 +181,31 @@ export function DashboardLayout() {
                     {/* Sign Out */}
                     <button
                         onClick={handleSignOut}
-                        title={isCollapsed ? "Sign Out" : undefined}
+                        title={isCollapsed ? 'Sign Out' : undefined}
                         className={cn(
-                            "flex items-center w-full py-2 text-sm font-medium text-slate-600 rounded-md hover:bg-slate-200/50 hover:text-slate-900 transition-colors group relative min-h-[40px]",
-                            isCollapsed ? "justify-center px-0" : "px-3"
+                            'flex items-center w-full py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors group relative min-h-[44px]',
+                            isCollapsed ? 'justify-center px-0' : 'px-3'
                         )}
                     >
-                        <LogOut className={cn("h-4 w-4 transition-colors text-slate-400 group-hover:text-slate-600", !isCollapsed && "mr-3")} />
-                        {!isCollapsed && <span>Sign Out</span>}
+                        <LogOut
+                            className={cn(
+                                'h-5 w-5 transition-colors text-slate-400 group-hover:text-red-600',
+                                !isCollapsed && 'mr-3'
+                            )}
+                        />
+                        {!isCollapsed && <span className="animate-in fade-in duration-200">Sign Out</span>}
                     </button>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 min-w-0 overflow-y-auto">
+            {/* Main Content - Add left margin/padding to account for fixed sidebar */}
+            <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar lg:ml-[70px]">
                 {/* Mobile Header */}
-                <div className="md:hidden flex items-center h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-30">
-                    <button
-                        onClick={() => setIsMobileMenuOpen(true)}
-                        className="text-slate-500 hover:text-slate-700 p-2 -ml-2"
-                    >
-                        <Menu className="h-6 w-6" />
-                    </button>
-                    <span className="ml-2 font-semibold text-slate-900">Dashboard</span>
+                <div className="md:hidden flex items-center h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+                    <span className="ml-12 font-bold text-slate-900 text-lg">Dashboard</span>
                 </div>
 
-                <div className="p-4 md:p-8 max-w-7xl mx-auto">
+                <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
                     <Outlet />
                 </div>
             </main>

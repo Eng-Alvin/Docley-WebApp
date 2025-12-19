@@ -228,8 +228,7 @@ Admin capabilities:
 
 ### Database
 
-* MongoDB or PostgreSQL
-* User, document, scan, and usage collections
+* Supabase database
 
 ### File Processing
 

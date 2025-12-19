@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FileText, ChevronRight, GraduationCap, Quote } from 'lucide-react';
+import { X, FileText, ChevronRight, GraduationCap, Quote, Upload, Type, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
@@ -7,38 +7,56 @@ import { useToast } from '../../context/ToastContext';
 export function IntakeModal({ isOpen, onClose }) {
     const navigate = useNavigate();
     const { addToast } = useToast();
-    const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         title: '',
         type: 'Essay',
         level: 'Undergraduate',
-        style: 'APA 7th Edition'
+        style: 'APA 7th Edition',
     });
 
     if (!isOpen) return null;
 
     const handleSubmit = () => {
-        addToast("Document created successfully", "success");
+        if (!formData.title.trim()) {
+            addToast('Please enter a document title', 'warning');
+            return;
+        }
+        addToast('Document created successfully', 'success');
         navigate('/dashboard/editor/new', { state: { ...formData } });
         onClose();
     };
 
+    const citationStyles = [
+        { value: 'APA 7th Edition', label: 'APA 7th' },
+        { value: 'MLA 9th Edition', label: 'MLA 9th' },
+        { value: 'Harvard', label: 'Harvard' },
+        { value: 'Chicago', label: 'Chicago' },
+    ];
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-900">New Document</h2>
-                        <p className="text-xs text-slate-500">Set up your assignment details</p>
+                <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/30 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                            <Sparkles className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900">Create New Document</h2>
+                            <p className="text-xs text-slate-500">Set up your assignment details to get started</p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+                    <button
+                        onClick={onClose}
+                        className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                    >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-6">
+                <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                     {/* Title Input */}
                     <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -48,22 +66,23 @@ export function IntakeModal({ isOpen, onClose }) {
                         <input
                             type="text"
                             placeholder="e.g., The Impact of AI on Modern Education"
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             autoFocus
                         />
+                        <p className="text-xs text-slate-500">Give your assignment a clear, descriptive title</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Type Selection */}
+                    {/* Type and Level */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-indigo-600" />
-                                Type
+                                <Type className="h-4 w-4 text-indigo-600" />
+                                Document Type
                             </label>
                             <select
-                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer"
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                             >
@@ -75,14 +94,13 @@ export function IntakeModal({ isOpen, onClose }) {
                             </select>
                         </div>
 
-                        {/* Level Selection */}
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                                 <GraduationCap className="h-4 w-4 text-indigo-600" />
                                 Academic Level
                             </label>
                             <select
-                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer"
                                 value={formData.level}
                                 onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                             >
@@ -95,37 +113,58 @@ export function IntakeModal({ isOpen, onClose }) {
                     </div>
 
                     {/* Citation Style */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                             <Quote className="h-4 w-4 text-indigo-600" />
                             Citation Style
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {['APA 7th Edition', 'MLA 9th Edition', 'Harvard', 'Chicago'].map((style) => (
+                        <div className="grid grid-cols-2 gap-3">
+                            {citationStyles.map((style) => (
                                 <button
-                                    key={style}
-                                    onClick={() => setFormData({ ...formData, style })}
-                                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all text-left ${formData.style === style
-                                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500'
+                                    key={style.value}
+                                    onClick={() => setFormData({ ...formData, style: style.value })}
+                                    className={`px-4 py-3 rounded-lg text-sm font-medium border-2 transition-all text-left ${
+                                        formData.style === style.value
+                                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-200 shadow-sm'
                                             : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200 hover:bg-slate-50'
-                                        }`}
+                                    }`}
                                 >
-                                    {style}
+                                    <div className="font-semibold">{style.label}</div>
+                                    <div className="text-xs text-slate-500 mt-0.5">{style.value}</div>
                                 </button>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <Sparkles className="h-3 w-3 text-indigo-600" />
+                            </div>
+                            <div className="text-sm text-indigo-900">
+                                <p className="font-semibold mb-1">What happens next?</p>
+                                <p className="text-indigo-700 leading-relaxed">
+                                    After creating your document, you'll be taken to the editor where you can paste your draft,
+                                    run diagnostics, and apply the academic upgrade.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
+                    <Button variant="ghost" onClick={onClose} className="text-slate-600 hover:text-slate-900">
+                        Cancel
+                    </Button>
                     <Button
                         onClick={handleSubmit}
                         disabled={!formData.title.trim()}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/25"
                     >
-                        Create Document <ChevronRight className="ml-2 h-4 w-4" />
+                        Create Document
+                        <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
             </div>
