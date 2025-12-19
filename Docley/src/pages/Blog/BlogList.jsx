@@ -4,17 +4,33 @@ import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/Card';
 import { blogPosts } from '../../data/blogData';
 import { Calendar, User, Clock, ArrowRight } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { cn } from '../../lib/utils';
 
 export default function BlogList() {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    
     return (
-        <div className="min-h-screen bg-slate-50 font-sans">
+        <div className={cn(
+            "min-h-screen font-sans transition-colors duration-300",
+            isDark ? "bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" : "bg-slate-50"
+        )}>
             <Navbar />
 
             <div className="py-20 px-4 md:px-6">
                 <div className="container mx-auto max-w-6xl">
                     <div className="text-center mb-16">
-                        <h1 className="text-4xl font-bold text-slate-900 mb-4">Academic Insights</h1>
-                        <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                        <h1 className={cn(
+                            "text-4xl font-bold mb-4",
+                            isDark ? "text-white" : "text-slate-900"
+                        )}>
+                            Academic Insights
+                        </h1>
+                        <p className={cn(
+                            "text-xl max-w-2xl mx-auto",
+                            isDark ? "text-slate-300" : "text-slate-600"
+                        )}>
                             Tips, tricks, and strategies to master university writing and productivity.
                         </p>
                     </div>
@@ -22,7 +38,12 @@ export default function BlogList() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {blogPosts.map((post) => (
                             <Link to={`/blog/${post.id}`} key={post.id} className="group">
-                                <Card className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 border-slate-200">
+                                <Card className={cn(
+                                    "h-full overflow-hidden hover:shadow-xl transition-shadow duration-300",
+                                    isDark 
+                                        ? "bg-white/5 border-white/10 hover:bg-white/10" 
+                                        : "border-slate-200"
+                                )}>
                                     <div className="h-48 overflow-hidden">
                                         <img
                                             src={post.image}
@@ -31,24 +52,51 @@ export default function BlogList() {
                                         />
                                     </div>
                                     <CardContent className="p-6">
-                                        <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
-                                            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full font-medium">{post.category}</span>
+                                        <div className={cn(
+                                            "flex items-center gap-4 text-xs mb-4",
+                                            isDark ? "text-slate-400" : "text-slate-500"
+                                        )}>
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-full font-medium",
+                                                isDark 
+                                                    ? "bg-orange-500/20 text-orange-300" 
+                                                    : "bg-indigo-50 text-indigo-700"
+                                            )}>
+                                                {post.category}
+                                            </span>
                                             <span className="flex items-center"><Clock className="h-3 w-3 mr-1" /> {post.readTime}</span>
                                         </div>
 
-                                        <h2 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">
+                                        <h2 className={cn(
+                                            "text-xl font-bold mb-3 transition-colors",
+                                            isDark 
+                                                ? "text-white group-hover:text-orange-400" 
+                                                : "text-slate-900 group-hover:text-orange-600"
+                                        )}>
                                             {post.title}
                                         </h2>
 
-                                        <p className="text-slate-600 text-sm line-clamp-3 mb-4">
+                                        <p className={cn(
+                                            "text-sm line-clamp-3 mb-4",
+                                            isDark ? "text-slate-300" : "text-slate-600"
+                                        )}>
                                             {post.excerpt}
                                         </p>
 
-                                        <div className="flex items-center justify-between text-sm mt-auto pt-4 border-t border-slate-100">
-                                            <div className="flex items-center text-slate-500">
+                                        <div className={cn(
+                                            "flex items-center justify-between text-sm mt-auto pt-4 border-t",
+                                            isDark ? "border-white/10" : "border-slate-100"
+                                        )}>
+                                            <div className={cn(
+                                                "flex items-center",
+                                                isDark ? "text-slate-400" : "text-slate-500"
+                                            )}>
                                                 <User className="h-3 w-3 mr-1" /> {post.author}
                                             </div>
-                                            <div className="flex items-center text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className={cn(
+                                                "flex items-center font-medium opacity-0 group-hover:opacity-100 transition-opacity",
+                                                isDark ? "text-orange-400" : "text-orange-600"
+                                            )}>
                                                 Read <ArrowRight className="h-3 w-3 ml-1" />
                                             </div>
                                         </div>

@@ -16,7 +16,7 @@ export function FloatingDocuments() {
     ];
 
     return (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10 hidden lg:block">
             {documents.map((doc, idx) => {
                 const Icon = doc.icon;
                 return (

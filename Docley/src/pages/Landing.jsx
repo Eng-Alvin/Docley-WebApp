@@ -8,6 +8,57 @@ import { Navbar } from '../components/layout/Navbar';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
 
+// Typing Text Component
+function TypingText({ isDark }) {
+    const words = ['assignments', 'research papers', 'thesis', 'case studies', 'reports', 'essays'];
+    const [currentWordIndex, setCurrentWordIndex] = useState(0);
+    const [currentText, setCurrentText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        const currentWord = words[currentWordIndex];
+        let timeout;
+
+        if (!isDeleting && currentText.length < currentWord.length) {
+            timeout = setTimeout(() => {
+                setCurrentText(currentWord.substring(0, currentText.length + 1));
+            }, 100);
+        } else if (!isDeleting && currentText.length === currentWord.length) {
+            timeout = setTimeout(() => {
+                setIsDeleting(true);
+            }, 2000);
+        } else if (isDeleting && currentText.length > 0) {
+            timeout = setTimeout(() => {
+                setCurrentText(currentWord.substring(0, currentText.length - 1));
+            }, 50);
+        } else if (isDeleting && currentText.length === 0) {
+            setIsDeleting(false);
+            setCurrentWordIndex((prev) => (prev + 1) % words.length);
+        }
+
+        return () => clearTimeout(timeout);
+    }, [currentText, isDeleting, currentWordIndex, words]);
+
+    return (
+        <span className="inline-block">
+            <span className={cn(
+                "bg-gradient-to-r bg-clip-text text-transparent",
+                isDark 
+                    ? "from-orange-400 to-blue-400" 
+                    : "from-orange-500 to-blue-500"
+            )}>
+                {currentText}
+            </span>
+            <span className={cn(
+                "animate-pulse",
+                isDark ? "text-orange-400" : "text-orange-500"
+            )}>
+                |
+            </span>
+        </span>
+    );
+}
+
 function FAQItem({ item, isOpen, onToggle, isDark }) {
     return (
         <button
@@ -501,7 +552,7 @@ export default function Landing() {
                             "mt-6 text-5xl font-bold tracking-tight md:text-7xl lg:text-8xl leading-tight animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100",
                             isDark ? "text-white" : "text-slate-900"
                         )}>
-                            Upgrade your assignments to
+                            Upgrade your <TypingText isDark={isDark} /> to
                             <span className="block mt-2 bg-gradient-to-r from-orange-500 via-orange-600 to-blue-500 bg-clip-text text-transparent animate-gradient">
                                 submission-ready quality
                             </span>

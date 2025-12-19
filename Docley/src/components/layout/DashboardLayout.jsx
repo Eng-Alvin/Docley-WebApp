@@ -10,8 +10,12 @@ import {
     X,
     LogOut,
     Sparkles,
+    MessageSquare,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { OnboardingFlow, isOnboardingCompleted } from '../onboarding/OnboardingFlow';
 
 export function DashboardLayout() {
@@ -19,8 +23,12 @@ export function DashboardLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { theme } = useTheme();
+    const { user, signOut } = useAuth();
+    const isDark = theme === 'dark';
 
     // Check onboarding on mount
     useEffect(() => {
@@ -40,12 +48,14 @@ export function DashboardLayout() {
         return location.pathname.startsWith(path);
     };
 
-    const handleSignOut = () => {
-        addToast('Signing out...', 'info');
-        setTimeout(() => {
+    const handleSignOut = async () => {
+        try {
+            await signOut();
             addToast('Successfully signed out', 'success');
             navigate('/login');
-        }, 1000);
+        } catch (error) {
+            addToast('Failed to sign out', 'error');
+        }
     };
 
     const handleOnboardingComplete = () => {
@@ -56,9 +66,23 @@ export function DashboardLayout() {
     const isCollapsed = !isHovered;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex">
+        <div className={cn(
+            "min-h-screen flex transition-colors duration-300",
+            isDark 
+                ? "bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" 
+                : "bg-gradient-to-br from-slate-50 via-white to-slate-50"
+        )}>
             {/* Onboarding Flow */}
             {showOnboarding && <OnboardingFlow onComplete={handleOnboardingComplete} />}
+            
+            {/* Feedback Modal */}
+            {showFeedbackModal && (
+                <FeedbackModal 
+                    isOpen={showFeedbackModal} 
+                    onClose={() => setShowFeedbackModal(false)}
+                    isDark={isDark}
+                />
+            )}
 
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
@@ -85,31 +109,45 @@ export function DashboardLayout() {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className={cn(
-                    'fixed inset-y-0 left-0 z-30 bg-white border-r border-slate-200 flex flex-col shadow-lg transition-all duration-300 ease-in-out',
+                    'fixed inset-y-0 left-0 z-30 flex flex-col shadow-lg transition-all duration-300 ease-in-out backdrop-blur-xl',
                     // Mobile: hidden by default, shown when menu is open
                     isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full',
                     // Desktop: always visible, collapsed by default, expands on hover
                     'lg:translate-x-0',
-                    isCollapsed ? 'lg:w-[70px]' : 'lg:w-[260px]'
+                    isCollapsed ? 'lg:w-[70px]' : 'lg:w-[260px]',
+                    isDark 
+                        ? 'bg-white/5 border-r border-white/10' 
+                        : 'bg-white/80 border-r border-slate-200'
                 )}
             >
                 {/* Logo */}
                 <div
                     className={cn(
-                        'h-16 flex items-center border-b border-slate-200 transition-all duration-300 relative bg-gradient-to-r from-white to-indigo-50/30',
-                        isCollapsed ? 'justify-center px-0' : 'justify-center px-5'
+                        'h-16 flex items-center transition-all duration-300 relative',
+                        isCollapsed ? 'justify-center px-0' : 'justify-center px-5',
+                        isDark 
+                            ? 'border-b border-white/10 bg-gradient-to-r from-white/5 to-white/5' 
+                            : 'border-b border-slate-200 bg-gradient-to-r from-white to-indigo-50/30'
                     )}
                 >
                     <Link to="/" className="flex items-center gap-3 overflow-hidden">
-                        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-2 rounded-lg flex-shrink-0 shadow-lg shadow-indigo-500/25">
+                        <div className="bg-gradient-to-br from-orange-500 to-blue-500 text-white p-2 rounded-lg flex-shrink-0 shadow-lg shadow-orange-500/25">
                             <Sparkles className="h-5 w-5" />
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col animate-in fade-in duration-200">
-                                <span className="font-bold text-slate-900 tracking-tight whitespace-nowrap text-lg">
+                                <span className={cn(
+                                    "font-bold tracking-tight whitespace-nowrap text-lg",
+                                    isDark ? "text-white" : "text-slate-900"
+                                )}>
                                     Docley
                                 </span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Academic Transformer</span>
+                                <span className={cn(
+                                    "text-[10px] uppercase tracking-wider",
+                                    isDark ? "text-slate-400" : "text-slate-500"
+                                )}>
+                                    Academic Transformer
+                                </span>
                             </div>
                         )}
                     </Link>
@@ -127,14 +165,20 @@ export function DashboardLayout() {
                                 'flex items-center py-2.5 rounded-lg transition-all duration-200 group relative min-h-[44px]',
                                 isCollapsed ? 'justify-center px-0' : 'px-3',
                                 isActive(item.href)
-                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-50/50 text-indigo-700 shadow-sm border border-indigo-100'
-                                    : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900'
+                                    ? isDark
+                                        ? 'bg-gradient-to-r from-orange-500/20 to-orange-500/10 text-orange-300 shadow-sm border border-orange-500/30'
+                                        : 'bg-gradient-to-r from-orange-50 to-orange-50/50 text-orange-700 shadow-sm border border-orange-100'
+                                    : isDark
+                                        ? 'text-slate-300 hover:bg-white/10 hover:text-white'
+                                        : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900'
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     'h-5 w-5 flex-shrink-0 transition-colors',
-                                    isActive(item.href) ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600',
+                                    isActive(item.href) 
+                                        ? isDark ? 'text-orange-400' : 'text-orange-600' 
+                                        : isDark ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-600',
                                     !isCollapsed && 'mr-3'
                                 )}
                             />
@@ -146,7 +190,12 @@ export function DashboardLayout() {
 
                             {/* Hover Tooltip for Collapsed State */}
                             {isCollapsed && (
-                                <div className="fixed left-[80px] bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[60] pointer-events-none">
+                                <div className={cn(
+                                    "fixed left-[80px] text-xs px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[60] pointer-events-none",
+                                    isDark 
+                                        ? "bg-white/10 backdrop-blur-md border border-white/20 text-white" 
+                                        : "bg-slate-900 text-white"
+                                )}>
                                     {item.name}
                                 </div>
                             )}
@@ -155,41 +204,66 @@ export function DashboardLayout() {
                 </nav>
 
                 {/* Bottom Sidebar */}
-                <div className="p-3 space-y-2 border-t border-slate-200 bg-gradient-to-b from-white to-slate-50/50">
-                    {/* Usage Stats (Hidden when collapsed) */}
-                    {!isCollapsed && (
-                        <div className="px-3 py-3 bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-xl shadow-sm mb-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex items-center justify-between text-xs font-semibold text-slate-900 mb-2">
-                                <span>Free Plan</span>
-                                <Link
-                                    to="/pricing"
-                                    className="text-indigo-600 hover:text-indigo-700 hover:underline text-xs font-medium"
-                                >
-                                    Upgrade
-                                </Link>
-                            </div>
-                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full" style={{ width: '33%' }}></div>
-                            </div>
-                            <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500">
-                                <span>1 / 3 documents</span>
-                                <span>This month</span>
-                            </div>
-                        </div>
-                    )}
+                <div className={cn(
+                    "p-3 space-y-2 border-t bg-gradient-to-b",
+                    isDark 
+                        ? "border-white/10 from-white/5 to-white/5" 
+                        : "border-slate-200 from-white to-slate-50/50"
+                )}>
+                    {/* Send Feedback Button */}
+                    <button
+                        onClick={() => setShowFeedbackModal(true)}
+                        title={isCollapsed ? 'Send Feedback' : undefined}
+                        className={cn(
+                            'flex items-center w-full py-3 text-base font-medium rounded-lg transition-colors group relative min-h-[52px]',
+                            isCollapsed ? 'justify-center px-0' : 'px-4',
+                            isDark
+                                ? 'text-slate-200 hover:bg-white/10 hover:text-orange-400 bg-white/5'
+                                : 'text-slate-700 hover:bg-slate-100/50 hover:text-orange-600 bg-slate-50'
+                        )}
+                    >
+                        <MessageSquare
+                            className={cn(
+                                'h-5 w-5 transition-colors',
+                                isDark ? 'text-slate-300 group-hover:text-orange-400' : 'text-slate-500 group-hover:text-orange-600',
+                                !isCollapsed && 'mr-3'
+                            )}
+                        />
+                        {!isCollapsed && <span className="animate-in fade-in duration-200 font-semibold">Send Feedback</span>}
+                    </button>
+
+                    {/* Theme Toggle */}
+                    <div className={cn(
+                        "flex items-center w-full",
+                        isCollapsed ? 'justify-center' : 'px-3'
+                    )}>
+                        {!isCollapsed && (
+                            <span className={cn(
+                                "text-sm font-medium mr-3",
+                                isDark ? "text-slate-300" : "text-slate-600"
+                            )}>
+                                Theme
+                            </span>
+                        )}
+                        <ThemeToggle className={isCollapsed ? "w-full" : ""} />
+                    </div>
 
                     {/* Sign Out */}
                     <button
                         onClick={handleSignOut}
                         title={isCollapsed ? 'Sign Out' : undefined}
                         className={cn(
-                            'flex items-center w-full py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors group relative min-h-[44px]',
-                            isCollapsed ? 'justify-center px-0' : 'px-3'
+                            'flex items-center w-full py-2.5 text-sm font-medium rounded-lg transition-colors group relative min-h-[44px]',
+                            isCollapsed ? 'justify-center px-0' : 'px-3',
+                            isDark
+                                ? 'text-slate-300 hover:bg-red-500/20 hover:text-red-400'
+                                : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
                         )}
                     >
                         <LogOut
                             className={cn(
-                                'h-5 w-5 transition-colors text-slate-400 group-hover:text-red-600',
+                                'h-5 w-5 transition-colors',
+                                isDark ? 'text-slate-400 group-hover:text-red-400' : 'text-slate-400 group-hover:text-red-600',
                                 !isCollapsed && 'mr-3'
                             )}
                         />
@@ -201,14 +275,170 @@ export function DashboardLayout() {
             {/* Main Content - Add left margin/padding to account for fixed sidebar */}
             <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar lg:ml-[70px]">
                 {/* Mobile Header */}
-                <div className="md:hidden flex items-center h-16 px-4 bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-                    <span className="ml-12 font-bold text-slate-900 text-lg">Dashboard</span>
+                <div className={cn(
+                    "lg:hidden flex items-center h-16 px-4 sticky top-0 z-30 shadow-sm backdrop-blur-xl border-b",
+                    isDark 
+                        ? "bg-white/5 border-white/10" 
+                        : "bg-white/80 border-slate-200"
+                )}>
+                    <span className={cn(
+                        "ml-12 font-bold text-lg",
+                        isDark ? "text-white" : "text-slate-900"
+                    )}>
+                        Dashboard
+                    </span>
                 </div>
 
-                <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+                <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
                     <Outlet />
                 </div>
             </main>
+        </div>
+    );
+}
+
+// Feedback Modal Component
+function FeedbackModal({ isOpen, onClose, isDark }) {
+    const [feedback, setFeedback] = useState('');
+    const [rating, setRating] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { addToast } = useToast();
+
+    if (!isOpen) return null;
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!feedback.trim()) {
+            addToast('Please enter your feedback', 'warning');
+            return;
+        }
+
+        setIsSubmitting(true);
+        // Simulate API call
+        setTimeout(() => {
+            setIsSubmitting(false);
+            addToast('Thank you for your feedback!', 'success');
+            setFeedback('');
+            setRating(0);
+            onClose();
+        }, 1000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={cn(
+                "bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200",
+                isDark && "bg-slate-800 border border-white/10"
+            )}>
+                {/* Header */}
+                <div className={cn(
+                    "px-6 py-5 border-b flex items-center justify-between",
+                    isDark ? "border-white/10 bg-white/5" : "border-slate-100 bg-gradient-to-r from-white to-indigo-50/30"
+                )}>
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-blue-500 flex items-center justify-center">
+                            <MessageSquare className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className={cn(
+                                "text-xl font-bold",
+                                isDark ? "text-white" : "text-slate-900"
+                            )}>
+                                Send Feedback
+                            </h2>
+                            <p className={cn(
+                                "text-xs",
+                                isDark ? "text-slate-400" : "text-slate-500"
+                            )}>
+                                Help us improve Docley
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className={cn(
+                            "text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100",
+                            isDark && "hover:bg-white/10 hover:text-white"
+                        )}
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    {/* Rating */}
+                    <div className="space-y-2">
+                        <label className={cn(
+                            "text-sm font-semibold",
+                            isDark ? "text-slate-300" : "text-slate-700"
+                        )}>
+                            How would you rate your experience?
+                        </label>
+                        <div className="flex gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setRating(star)}
+                                    className={cn(
+                                        "text-2xl transition-all duration-200 hover:scale-110",
+                                        rating >= star ? "text-orange-500" : isDark ? "text-slate-600" : "text-slate-300"
+                                    )}
+                                >
+                                    ★
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Feedback Text */}
+                    <div className="space-y-2">
+                        <label className={cn(
+                            "text-sm font-semibold",
+                            isDark ? "text-slate-300" : "text-slate-700"
+                        )}>
+                            Your Feedback
+                        </label>
+                        <textarea
+                            value={feedback}
+                            onChange={(e) => setFeedback(e.target.value)}
+                            placeholder="Tell us what you think, what features you'd like, or report any issues..."
+                            rows={6}
+                            className={cn(
+                                "w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all resize-none",
+                                isDark
+                                    ? "bg-white/5 border-white/10 text-white placeholder-slate-500"
+                                    : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                            )}
+                            required
+                        />
+                    </div>
+
+                    {/* Footer */}
+                    <div className={cn(
+                        "flex justify-end gap-3 pt-4 border-t",
+                        isDark ? "border-white/10" : "border-slate-100"
+                    )}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={onClose}
+                            className={isDark ? "text-slate-300 hover:text-white hover:bg-white/10" : ""}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting || !feedback.trim()}
+                            isLoading={isSubmitting}
+                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25"
+                        >
+                            Send Feedback
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
