@@ -4,13 +4,11 @@ import { Button } from '../ui/Button';
 
 import mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
-// Set worker for pdfjs - use unpkg CDN (more reliable than cdnjs)
-// unpkg serves files directly from npm packages and is generally more reliable
+// Set worker for pdfjs - use local worker URL from Vite
 if (typeof window !== 'undefined') {
-    const workerVersion = pdfjs.version;
-    // Use unpkg CDN - more reliable than cdnjs
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${workerVersion}/build/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 }
 
 export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
@@ -83,11 +81,24 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
                 reader.readAsText(selectedFile);
             } else if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 const arrayBuffer = await selectedFile.arrayBuffer();
-                // Convert DOCX to HTML with images preserved
+
+                // Style mapping for better formatting preservation
+                const styleMap = [
+                    "p[style-name='Heading 1'] => h1:fresh",
+                    "p[style-name='Heading 2'] => h2:fresh",
+                    "p[style-name='Heading 3'] => h3:fresh",
+                    "p[style-name='Title'] => h1:fresh",
+                    "p[style-name='Subtitle'] => h2:fresh",
+                    "r[style-name='Strong'] => strong",
+                    "r[style-name='Emphasis'] => em",
+                ];
+
+                // Convert DOCX to HTML with images preserved as data URLs
                 const result = await mammoth.convertToHtml({
                     arrayBuffer,
+                    styleMap,
                     convertImage: mammoth.images.imgElement((image) => {
-                        // Convert images to base64 data URLs
+                        // Convert images to inline base64 data URLs
                         return image.read('base64').then((imageBuffer) => {
                             return {
                                 src: `data:${image.contentType};base64,${imageBuffer}`
@@ -96,105 +107,129 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
                     })
                 });
 
-                // Preserve the HTML structure from mammoth
+                console.log('DOCX converted. HTML length:', result.value.length);
+                if (result.messages.length > 0) {
+                    console.log('Mammoth messages:', result.messages);
+                }
+
+                // Pass HTML to editor (preserves bold, lists, images)
                 setHtmlContent(result.value);
-                // Extract plain text for content preview
+
+                // Extract plain text for word count preview
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = result.value;
                 setContent(tempDiv.textContent || tempDiv.innerText || selectedFile.name);
                 setIsLoading(false);
             } else if (selectedFile.type === 'application/pdf') {
                 try {
-                    // Verify worker is configured
-                    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-                        // Fallback worker configuration
-                        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-                    }
+                    // Set worker to local Vite URL
+                    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+                    console.log('PDF.js worker configured locally:', pdfjs.GlobalWorkerOptions.workerSrc);
 
                     const arrayBuffer = await selectedFile.arrayBuffer();
 
-                    // Configure PDF.js with better error handling
+                    // Load the PDF document
                     const loadingTask = pdfjs.getDocument({
                         data: arrayBuffer,
-                        verbosity: 0, // Reduce console noise
-                        // Remove cMapUrl to avoid additional CDN dependencies
-                        // cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
-                        // cMapPacked: true,
+                        verbosity: 0,
                     });
 
                     const pdf = await loadingTask.promise;
+                    console.log(`PDF loaded successfully: ${pdf.numPages} pages`);
 
                     if (!pdf || pdf.numPages === 0) {
                         throw new Error('PDF appears to be empty or corrupted');
                     }
 
-                    let htmlContent = '';
-                    let fullText = '';
-                    const maxPages = Math.min(pdf.numPages, 50); // Limit to 50 pages for performance
+                    const maxPages = Math.min(pdf.numPages, 50);
 
+                    // Create array of page promises
+                    const pagePromises = [];
                     for (let i = 1; i <= maxPages; i++) {
-                        try {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-
-                            if (textContent && textContent.items && textContent.items.length > 0) {
-                                let pageText = '';
-                                let lastY = -1;
-
-                                // Sort items by Y then X to ensure reading order
-                                const items = textContent.items.sort((a, b) => {
-                                    if (Math.abs(a.transform[5] - b.transform[5]) > 5) {
-                                        return b.transform[5] - a.transform[5]; // Top to bottom
-                                    }
-                                    return a.transform[4] - b.transform[4]; // Left to right
-                                });
-
-                                items.forEach((item) => {
-                                    if ('str' in item) {
-                                        const text = item.str;
-                                        const currentY = item.transform[5];
-
-                                        // Detect new line
-                                        if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
-                                            pageText += '\n';
-                                        } else if (pageText.length > 0 && !pageText.endsWith(' ') && !text.startsWith(' ')) {
-                                            // Add space between words on same line if explicit space missing
-                                            pageText += ' ';
-                                        }
-
-                                        pageText += text;
-                                        lastY = currentY;
-                                    }
-                                });
-
-                                if (pageText.trim()) {
-                                    // Convert plain text page to HTML paragraphs
-                                    const paragraphs = pageText.split('\n').filter(line => line.trim());
-                                    const pageHtml = paragraphs.map(p => {
-                                        // Very basic heading detection based on length or capitalization could be added here
-                                        // For now, stick to paragraphs to ensure content visibility
-                                        return `<p>${p}</p>`;
-                                    }).join('');
-
-                                    htmlContent += pageHtml;
-                                    fullText += pageText + '\n\n';
-                                }
-                            }
-                        } catch (pageError) {
-                            console.warn(`Error reading page ${i}:`, pageError);
-                        }
+                        pagePromises.push(pdf.getPage(i));
                     }
 
-                    if (!fullText.trim() && !htmlContent.trim()) {
-                        throw new Error('Could not extract text from PDF. The PDF might be image-based or protected.');
+                    // Await all pages using Promise.all
+                    const pages = await Promise.all(pagePromises);
+                    console.log(`Loaded ${pages.length} pages`);
+
+                    // Get text content from all pages using Promise.all
+                    const textContentPromises = pages.map(page => page.getTextContent());
+                    const textContents = await Promise.all(textContentPromises);
+                    console.log(`Extracted text content from ${textContents.length} pages`);
+
+                    // Process each page's text content
+                    const htmlParts = [];
+                    const allText = [];
+
+                    textContents.forEach((textContent, pageIndex) => {
+                        if (!textContent || !textContent.items || textContent.items.length === 0) {
+                            console.log(`Page ${pageIndex + 1}: No text items found`);
+                            return;
+                        }
+
+                        let pageHtml = '';
+                        let pageText = '';
+                        let lastY = null;
+
+                        // Process each text item
+                        textContent.items.forEach((item) => {
+                            if (!item.str) return;
+
+                            const text = item.str;
+                            const y = item.transform ? item.transform[5] : null;
+
+                            // Check Y-coordinate for line breaks
+                            if (lastY !== null && y !== null) {
+                                const yDiff = Math.abs(y - lastY);
+                                if (yDiff > 3) {
+                                    // Y changed - insert line break
+                                    pageHtml += '<br />';
+                                    pageText += '\n';
+                                }
+                            }
+
+                            // Add space between words if needed
+                            if (pageHtml && !pageHtml.endsWith(' ') && !pageHtml.endsWith('>') && !text.startsWith(' ')) {
+                                pageHtml += ' ';
+                                pageText += ' ';
+                            }
+
+                            pageHtml += text;
+                            pageText += text;
+
+                            if (y !== null) {
+                                lastY = y;
+                            }
+                        });
+
+                        // Wrap page content in paragraph tags
+                        if (pageHtml.trim()) {
+                            htmlParts.push(`<p>${pageHtml.trim()}</p>`);
+                            allText.push(pageText.trim());
+                        }
+
+                        // Add page separator
+                        if (pageIndex < textContents.length - 1) {
+                            htmlParts.push('<hr style="border:none; border-top:1px dashed #ccc; margin:1rem 0;" />');
+                        }
+                    });
+
+                    const fullText = allText.join('\n\n');
+                    const htmlResult = htmlParts.join('');
+
+                    console.log(`Final extraction: ${fullText.length} chars, ${htmlParts.length} elements`);
+
+                    if (!fullText.trim()) {
+                        throw new Error('Could not extract text from PDF. The PDF might be image-based (scanned) or password-protected.');
                     }
 
                     setContent(fullText);
-                    setHtmlContent(htmlContent || fullText.split('\n\n').filter(p => p.trim()).map(para => `<p>${para.trim()}</p>`).join(''));
+                    setHtmlContent(htmlResult);
                     setIsLoading(false);
                 } catch (pdfError) {
                     console.error('PDF parsing error:', pdfError);
-                    setError(`Failed to parse PDF: ${pdfError.message || 'The file might be corrupted, password-protected, or image-based. Please try a different PDF or paste the text manually.'}`);
+                    setError(`Failed to parse PDF: ${pdfError.message || 'The file might be corrupted, password-protected, or image-based. Please try pasting the text manually.'}`);
                     setIsLoading(false);
                     setFile(null);
                 }

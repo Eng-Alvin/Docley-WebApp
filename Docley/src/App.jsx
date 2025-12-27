@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import Landing from './pages/Landing';
 import Pricing from './pages/Pricing';
 import BlogList from './pages/Blog/BlogList';
@@ -7,12 +8,6 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import DashboardDocuments from './pages/Dashboard/DashboardDocuments';
 import DashboardSettings from './pages/Dashboard/DashboardSettings';
-import { AdminLayout } from './layouts/AdminLayout';
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import BlogManager from './pages/Admin/BlogManager';
-import BlogPostEditor from './pages/Admin/BlogPostEditor';
-import UsersManager from './pages/Admin/UsersManager';
-import AdminSettings from './pages/Admin/AdminSettings';
 import EditorPage from './pages/Editor/EditorPage';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
@@ -24,6 +19,27 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute, PublicRoute, AdminOnlyRoute } from './components/ProtectedRoute';
 import { FloatingDocuments } from './components/ui/FloatingDocuments';
+import { Loader2 } from 'lucide-react';
+
+// Lazy-loaded Admin components (code splitting)
+const AdminLayout = lazy(() => import('./layouts/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
+const BlogManager = lazy(() => import('./pages/Admin/BlogManager'));
+const BlogPostEditor = lazy(() => import('./pages/Admin/BlogPostEditor'));
+const UsersManager = lazy(() => import('./pages/Admin/UsersManager'));
+const AdminSettings = lazy(() => import('./pages/Admin/AdminSettings'));
+
+// Loading fallback for lazy-loaded components
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 text-orange-500 animate-spin mx-auto" />
+        <p className="mt-4 text-slate-600 text-sm">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -76,18 +92,44 @@ function App() {
                 <Route path="settings" element={<DashboardSettings />} />
               </Route>
 
-              {/* Admin Routes - Restricted to admin email only */}
+              {/* Admin Routes - Lazy loaded, restricted to admin email only */}
               <Route path="/admin" element={
                 <AdminOnlyRoute>
-                  <AdminLayout />
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminLayout />
+                  </Suspense>
                 </AdminOnlyRoute>
               }>
-                <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<UsersManager />} />
-                <Route path="blog" element={<BlogManager />} />
-                <Route path="blog/new" element={<BlogPostEditor />} />
-                <Route path="blog/edit/:id" element={<BlogPostEditor />} />
-                <Route path="settings" element={<AdminSettings />} />
+                <Route index element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminDashboard />
+                  </Suspense>
+                } />
+                <Route path="users" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <UsersManager />
+                  </Suspense>
+                } />
+                <Route path="blog" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <BlogManager />
+                  </Suspense>
+                } />
+                <Route path="blog/new" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <BlogPostEditor />
+                  </Suspense>
+                } />
+                <Route path="blog/edit/:id" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <BlogPostEditor />
+                  </Suspense>
+                } />
+                <Route path="settings" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminSettings />
+                  </Suspense>
+                } />
               </Route>
             </Routes>
           </Router>

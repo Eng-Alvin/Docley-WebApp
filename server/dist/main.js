@@ -41,7 +41,7 @@ const app_module_1 = require("./app.module");
 const common_1 = require("@nestjs/common");
 const dotenv = __importStar(require("dotenv"));
 const helmet_1 = __importDefault(require("helmet"));
-const compression = __importStar(require("compression"));
+const compression = require('compression');
 dotenv.config();
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
