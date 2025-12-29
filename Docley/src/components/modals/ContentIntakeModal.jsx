@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { X, Upload, FileText, ClipboardPaste, ChevronRight, File, Trash2, CheckCircle } from 'lucide-react';
+import { X, Upload, FileText, ClipboardPaste, ChevronRight, File, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { supabase } from '../../lib/supabase';
 
 import mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
@@ -241,7 +242,7 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
         }
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (activeTab === 'paste' && !content.trim()) {
             setError('Please paste some content to continue');
             return;
@@ -251,12 +252,48 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
             return;
         }
 
-        onContinue({
-            content: activeTab === 'paste' ? content : content,
-            contentHtml: activeTab === 'paste' ? content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('') : htmlContent,
-            file: activeTab === 'upload' ? file : null,
-            inputType: activeTab,
-        });
+        setIsLoading(true);
+        setError('');
+
+        try {
+            let fileUrl = null;
+
+            if (activeTab === 'upload' && file) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('User not authenticated');
+
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+                const filePath = `${user.id}/${fileName}`;
+
+                const { error: uploadError, data } = await supabase.storage
+                    .from('documents')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('documents')
+                    .getPublicUrl(filePath);
+
+                fileUrl = publicUrl;
+            }
+
+            onContinue({
+                content: activeTab === 'paste' ? content : content,
+                contentHtml: activeTab === 'paste'
+                    ? `<div style="font-size: 12pt;">${content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('')}</div>`
+                    : `<div style="font-size: 12pt;">${htmlContent}</div>`,
+                file: activeTab === 'upload' ? file : null,
+                fileUrl,
+                inputType: activeTab,
+            });
+        } catch (err) {
+            console.error('Upload/Process error:', err);
+            setError(err.message || 'Failed to process content. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleClose = () => {
@@ -431,11 +468,12 @@ You can paste directly from Word, Google Docs, or any other text editor. We'll p
                     </Button>
                     <Button
                         onClick={handleContinue}
-                        disabled={(activeTab === 'paste' && !content.trim()) || (activeTab === 'upload' && !file)}
+                        disabled={(activeTab === 'paste' && !content.trim()) || (activeTab === 'upload' && !file) || isLoading}
+                        isLoading={isLoading}
                         className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25"
                     >
-                        Continue
-                        <ChevronRight className="ml-2 h-4 w-4" />
+                        {isLoading ? 'Processing...' : 'Continue'}
+                        {!isLoading && <ChevronRight className="ml-2 h-4 w-4" />}
                     </Button>
                 </div>
             </div>

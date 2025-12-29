@@ -3,8 +3,10 @@ import {
     Get,
     Post,
     Patch,
+    Delete,
     Param,
     Body,
+    Query,
     UseGuards,
     Req
 } from '@nestjs/common';
@@ -30,8 +32,17 @@ export class DocumentsController {
     }
 
     @Get()
-    async findAll(@Req() req) {
-        return this.documentsService.findAll(req.user.id);
+    async findAll(
+        @Req() req,
+        @Query('status') status?: string,
+        @Query('academic_level') academicLevel?: string,
+        @Query('type') type?: 'owned' | 'shared' | 'all'
+    ) {
+        return this.documentsService.findAll(req.user.id, {
+            status,
+            academic_level: academicLevel,
+            type
+        });
     }
 
     @Get(':id')
@@ -42,5 +53,24 @@ export class DocumentsController {
     @Patch(':id')
     async update(@Req() req, @Param('id') id: string, @Body() body: any) {
         return this.documentsService.update(id, body, req.user.id);
+    }
+
+    @Delete(':id')
+    async remove(@Req() req, @Param('id') id: string) {
+        return this.documentsService.remove(id, req.user.id);
+    }
+
+    @Post(':id/share')
+    async share(
+        @Req() req,
+        @Param('id') id: string,
+        @Body() body: { email: string, permission: 'read' | 'write' }
+    ) {
+        return this.documentsService.shareDocument(id, req.user.id, body.email, body.permission);
+    }
+
+    @Get(':id/shares')
+    async getShares(@Req() req, @Param('id') id: string) {
+        return this.documentsService.getShares(id, req.user.id);
     }
 }

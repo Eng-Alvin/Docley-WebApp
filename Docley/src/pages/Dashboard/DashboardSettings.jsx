@@ -1,8 +1,9 @@
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
-import { User, Bell, CreditCard, Shield, Mail, Save, Key, Trash2, AlertTriangle } from 'lucide-react';
+import { User, Bell, CreditCard, Shield, Mail, Save, Key, Trash2, AlertTriangle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useState } from 'react';
+import { updatePassword } from '../../services/usersService';
 
 export default function DashboardSettings() {
     const { addToast } = useToast();
@@ -14,12 +15,47 @@ export default function DashboardSettings() {
         marketing: false,
     });
 
+    // Password change state
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+    const [passwordData, setPasswordData] = useState({
+        newPassword: '',
+        confirmPassword: '',
+    });
+    const [showPasswords, setShowPasswords] = useState(false);
+
     const handleSave = () => {
         setIsSaving(true);
         setTimeout(() => {
             setIsSaving(false);
             addToast('Settings saved successfully!', 'success');
         }, 1000);
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            addToast('Passwords do not match', 'error');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 8) {
+            addToast('Password must be at least 8 characters long', 'warning');
+            return;
+        }
+
+        setIsUpdatingPassword(true);
+        try {
+            await updatePassword(passwordData.newPassword);
+            addToast('Password updated successfully', 'success');
+            setShowPasswordForm(false);
+            setPasswordData({ newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            addToast(error.message || 'Failed to update password', 'error');
+        } finally {
+            setIsUpdatingPassword(false);
+        }
     };
 
     const handleCancelPlan = () => {
@@ -227,11 +263,61 @@ export default function DashboardSettings() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => addToast('Password change flow not implemented yet', 'info')}
+                            onClick={() => setShowPasswordForm(!showPasswordForm)}
                         >
-                            Change Password
+                            {showPasswordForm ? 'Cancel' : 'Change Password'}
                         </Button>
                     </div>
+
+                    {showPasswordForm && (
+                        <form onSubmit={handlePasswordChange} className="mt-4 p-5 rounded-xl border border-indigo-100 bg-indigo-50/30 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-slate-700">New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPasswords ? "text" : "password"}
+                                            value={passwordData.newPassword}
+                                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                            className="w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Min. 8 characters"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPasswords(!showPasswords)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                        >
+                                            {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-slate-700">Confirm Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPasswords ? "text" : "password"}
+                                            value={passwordData.confirmPassword}
+                                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                            className="w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Match new password"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    isLoading={isUpdatingPassword}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                >
+                                    Update Password
+                                </Button>
+                            </div>
+                        </form>
+                    )}
                     <div className="flex items-center justify-between py-3">
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">

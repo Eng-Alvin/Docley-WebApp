@@ -97,4 +97,20 @@ export class UsersService {
             })
             .eq('user_id', userId);
     }
+
+    /**
+     * Update user password using Supabase Admin Auth
+     */
+    async updatePassword(userId: string, newPassword: string) {
+        const { data, error } = await this.client.auth.admin.updateUserById(
+            userId,
+            { password: newPassword }
+        );
+
+        if (error) {
+            throw new InternalServerErrorException(`Failed to update password: ${error.message}`);
+        }
+
+        return data;
+    }
 }

@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 import helmet from 'helmet';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 const compression = require('compression');
 
 dotenv.config();
@@ -53,6 +54,9 @@ async function bootstrap() {
       transform: true, // Auto-transform payloads to DTO types
     }),
   );
+
+  // Global exception filter for clear error reporting
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

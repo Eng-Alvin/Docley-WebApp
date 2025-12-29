@@ -52,11 +52,18 @@ export async function createDocument(documentData) {
     return await response.json();
 }
 
-// Get all documents for the current user
-export async function getDocuments() {
+// Get all documents for the current user with optional filtering
+export async function getDocuments(filters = {}) {
     const headers = await getAuthHeaders();
 
-    const response = await fetch(API_URL, {
+    // Construct query parameters
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.academicLevel) params.append('academic_level', filters.academicLevel);
+    if (filters.type) params.append('type', filters.type);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_URL}${queryString}`, {
         method: 'GET',
         headers
     });
@@ -102,6 +109,9 @@ export async function updateDocument(id, updates) {
     if (updates.citationStyle !== undefined) updateData.citation_style = updates.citationStyle;
     if (updates.documentType !== undefined) updateData.document_type = updates.documentType;
     if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.margins !== undefined) updateData.margins = updates.margins;
+    if (updates.headerText !== undefined) updateData.header_text = updates.headerText;
+    if (updates.fileUrl !== undefined) updateData.file_url = updates.fileUrl;
 
     const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
@@ -118,23 +128,25 @@ export async function updateDocument(id, updates) {
 }
 
 // Soft delete a document
-// NOT YET IMPLEMENTED IN BACKEND - Keeping frontend implementation for momentary fallback or needs backend update
-// Based on plan, this should also be API call. Assuming Delete endpoint on backend is next or use Update.
-// For now, mapping delete to update status/deleted_at via Patch if supported, or leaving strict delete.
-// Request only asked for GET, POST, PATCH. I will use PATCH to soft delete if possible, 
-// or I will implement DELETE endpoint in backend quickly if necessary? 
-// The user prompt only asked for create, update, findAll, findOne methods in backend.
-// So I will comment out delete functionality or implement it via PATCH { deleted_at: ... } if backend supports it.
-// Checking backend service... update takes 'updates: any'. So yes!
-
 export async function deleteDocument(id) {
     return updateDocument(id, { deleted_at: new Date().toISOString() });
 }
 
+// Permanently delete a document
 export async function permanentlyDeleteDocument(id) {
-    // Admin only, or requires DELETE endpoints not yet built.
-    // For now throwing error or omitting to stay consistent with instructions.
-    throw new Error("Permanently delete not supported in this API version yet.");
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to permanently delete document');
+    }
+
+    return true;
 }
 
 // Auto-save document content (debounced in component)
@@ -143,11 +155,42 @@ export async function autoSaveDocument(id, content, contentHtml) {
 }
 
 // Get document count for user
-// This usually requires a specific count endpoint or counting based on getDocuments.
-// To keep it simple and performant, we can assume the dashboard might need a separate endpoint
-// or just fetch all and count for now (performance hit on simple implementations).
-// Ideally backend should have /documents/stats.
 export async function getDocumentCount() {
     const docs = await getDocuments();
     return docs.length;
+}
+
+// Share a document with another user by email
+export async function shareDocument(id, email, permission = 'read') {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/${id}/share`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email, permission })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to share document');
+    }
+
+    return await response.json();
+}
+
+// Get all collaborators for a document
+export async function getDocumentShares(id) {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/${id}/shares`, {
+        method: 'GET',
+        headers
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch collaborator list');
+    }
+
+    return await response.json();
 }

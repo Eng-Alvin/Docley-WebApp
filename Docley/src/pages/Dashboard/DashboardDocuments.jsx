@@ -17,11 +17,16 @@ import {
     Loader2,
     Trash2,
     BarChart3,
+    ChevronDown,
+    X,
+    Share2,
+    Lock
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { ContentIntakeModal } from '../../components/modals/ContentIntakeModal';
 import { IntakeModal } from '../../components/modals/IntakeModal';
+import { ShareModal } from '../../components/modals/ShareModal';
 import { getDocuments, deleteDocument, permanentlyDeleteDocument } from '../../services/documentsService';
 
 export default function DashboardDocuments() {
@@ -35,16 +40,24 @@ export default function DashboardDocuments() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeMenu, setActiveMenu] = useState(null);
     const [deleteConfirmDoc, setDeleteConfirmDoc] = useState(null);
+    const [showFilterPopover, setShowFilterPopover] = useState(false);
+    const [filters, setFilters] = useState({
+        status: '',
+        academicLevel: '',
+        type: 'all'
+    });
+    const [shareTarget, setShareTarget] = useState(null);
     const { addToast } = useToast();
 
     // Load documents
     useEffect(() => {
         loadDocuments();
-    }, []);
+    }, [filters]);
 
     const loadDocuments = async () => {
+        setIsLoading(true);
         try {
-            const docs = await getDocuments();
+            const docs = await getDocuments(filters);
             setDocuments(docs);
         } catch (error) {
             console.error('Error loading documents:', error);
@@ -121,9 +134,12 @@ export default function DashboardDocuments() {
         return 0;
     });
 
-    const handleFilter = () => {
-        addToast('Filter options coming soon!', 'info');
+    const clearFilters = () => {
+        setFilters({ status: '', academicLevel: '', type: 'all' });
+        setShowFilterPopover(false);
     };
+
+    const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
 
     const getStatusBadge = (status) => {
         switch (status) {
@@ -208,14 +224,93 @@ export default function DashboardDocuments() {
                             </select>
                             <SortAsc className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                         </div>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={handleFilter}
-                            className="h-11 w-11 border-slate-200"
-                        >
-                            <Filter className="h-4 w-4" />
-                        </Button>
+                        <div className="relative">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowFilterPopover(!showFilterPopover)}
+                                className={`h-11 border-slate-200 gap-2 ${activeFilterCount > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : ''}`}
+                            >
+                                <Filter className="h-4 w-4" />
+                                <span className="hidden sm:inline">Filter</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="flex items-center justify-center bg-indigo-600 text-white text-[10px] h-4 w-4 rounded-full">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </Button>
+
+                            {showFilterPopover && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterPopover(false)} />
+                                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="font-bold text-slate-900">Filter Documents</h4>
+                                            {activeFilterCount > 0 && (
+                                                <button
+                                                    onClick={clearFilters}
+                                                    className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                                                >
+                                                    Clear all
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</label>
+                                                <select
+                                                    value={filters.status}
+                                                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white"
+                                                >
+                                                    <option value="">All Statuses</option>
+                                                    <option value="draft">Draft</option>
+                                                    <option value="diagnosed">Diagnosed</option>
+                                                    <option value="upgraded">Upgraded</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Academic Level</label>
+                                                <select
+                                                    value={filters.academicLevel}
+                                                    onChange={(e) => setFilters({ ...filters, academicLevel: e.target.value })}
+                                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white"
+                                                >
+                                                    <option value="">All Levels</option>
+                                                    <option value="High School">High School</option>
+                                                    <option value="Undergraduate">Undergraduate</option>
+                                                    <option value="Graduate">Graduate</option>
+                                                    <option value="Doctoral">Doctoral</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Workspace</label>
+                                                <select
+                                                    value={filters.type}
+                                                    onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white"
+                                                >
+                                                    <option value="all">All Documents</option>
+                                                    <option value="owned">Owned by me</option>
+                                                    <option value="shared">Shared with me</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6 pt-4 border-t border-slate-100">
+                                            <Button
+                                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/10"
+                                                onClick={() => setShowFilterPopover(false)}
+                                            >
+                                                Apply Filters
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                         <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-11">
                             <button
                                 onClick={() => setViewMode('grid')}
@@ -288,8 +383,16 @@ export default function DashboardDocuments() {
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
-                                                                        setDeleteConfirmDoc(doc);
+                                                                        setShareTarget(doc);
+                                                                        setActiveMenu(null);
                                                                     }}
+                                                                    className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                >
+                                                                    <Share2 className="h-4 w-4" />
+                                                                    Share Settings
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmDoc(doc); }}
                                                                     className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
@@ -425,6 +528,14 @@ export default function DashboardDocuments() {
                     </CardContent>
                 </Card>
             )}
+            {/* Share Modal */}
+            <ShareModal
+                isOpen={!!shareTarget}
+                onClose={() => setShareTarget(null)}
+                documentId={shareTarget?.id}
+                documentTitle={shareTarget?.title}
+            />
+
             {/* Delete Confirmation Modal */}
             {deleteConfirmDoc && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">

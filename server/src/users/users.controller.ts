@@ -1,7 +1,15 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Patch, Body, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { SupabaseGuard } from '../supabase/supabase.guard';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Controller('users')
+@UseGuards(SupabaseGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
+
+    @Patch('password')
+    async updatePassword(@Req() req, @Body() body: UpdatePasswordDto) {
+        return this.usersService.updatePassword(req.user.id, body.newPassword);
+    }
 }

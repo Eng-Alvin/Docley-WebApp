@@ -21,6 +21,9 @@
     padding: 96px;
     /* 1 inch Margins */
     transition: all 0.3s ease;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #1e293b;
 }
 
 /* List Styling (MS Word Style) */

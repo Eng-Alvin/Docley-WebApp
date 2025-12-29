@@ -23,14 +23,14 @@ const FontSize = Extension.create({
                 types: this.options.types,
                 attributes: {
                     fontSize: {
-                        default: null,
-                        parseHTML: element => element.style.fontSize.replace('px', ''),
+                        default: '12',
+                        parseHTML: element => element.style.fontSize.replace('pt', ''),
                         renderHTML: attributes => {
                             if (!attributes.fontSize) {
                                 return {};
                             }
                             return {
-                                style: `font-size: ${attributes.fontSize}px`,
+                                style: `font-size: ${attributes.fontSize}pt`,
                             };
                         },
                     },
@@ -134,6 +134,7 @@ import {
     Eraser,
     Layout,
     Image as ImageIcon,
+    Share2
 } from 'lucide-react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 
@@ -147,9 +148,12 @@ import { ColorPicker } from '../../components/ui/ColorPicker';
 import { exportToPDF, exportToWord } from './lib/exportUtils';
 import { getDocument, updateDocument, autoSaveDocument, deleteDocument, permanentlyDeleteDocument } from '../../services/documentsService';
 import { upgradeDocument } from '../../services/aiService';
+import { DocumentSettingsModal } from '../../components/modals/DocumentSettingsModal';
+import { CitationModal } from '../../components/modals/CitationModal';
+import { ShareModal } from '../../components/modals/ShareModal';
 
 // Memoized MenuBar component to prevent unnecessary re-renders
-const MenuBar = memo(({ editor, zoom, setZoom, onImageUpload, imageInputRef, editorStateToken }) => {
+const MenuBar = memo(({ editor, zoom, setZoom, onImageUpload, onCitationClick, imageInputRef, editorStateToken }) => {
     const [showFontFamily, setShowFontFamily] = useState(false);
     const [showHeadings, setShowHeadings] = useState(false);
     const [showLineHeight, setShowLineHeight] = useState(false);
@@ -195,20 +199,20 @@ const MenuBar = memo(({ editor, zoom, setZoom, onImageUpload, imageInputRef, edi
     const clampFontSize = (val) => {
         const size = parseInt(val);
         if (isNaN(size)) return 12;
-        return Math.min(Math.max(size, 6), 32);
+        return Math.min(Math.max(size, 6), 72);
     };
 
     // Memoize current font size to avoid recalculation
     // Memoize current font size to avoid recalculation, handling both selection and stored marks
     const currentFontSize = useMemo(() => {
-        if (!editor) return '11';
+        if (!editor) return '12';
         // Check for stored marks first (pending style)
         const storedMarks = editor.getAttributes('textStyle');
         if (storedMarks && storedMarks.fontSize) {
             return storedMarks.fontSize;
         }
         // Fallback to selection attributes
-        return editor.getAttributes('textStyle').fontSize || '11';
+        return editor.getAttributes('textStyle').fontSize || '12';
     }, [editor?.state.selection, editor?.state.storedMarks, editorStateToken]);
 
     // Optimize formatting callbacks with useCallback
@@ -222,13 +226,13 @@ const MenuBar = memo(({ editor, zoom, setZoom, onImageUpload, imageInputRef, edi
         if (!editor) return;
         // Logic to toggle stored mark if empty selection is missing here in simple implementation
         // But setFontSize chain helper usually handles it.
-        const size = parseInt(currentFontSize) || 11;
+        const size = parseInt(currentFontSize) || 12;
         updateFontSize((size + 1).toString());
     }, [currentFontSize, updateFontSize, editor]);
 
     const decrementFontSize = useCallback(() => {
         if (!editor) return;
-        const size = parseInt(currentFontSize) || 11;
+        const size = parseInt(currentFontSize) || 12;
         if (size > 1) {
             updateFontSize((size - 1).toString());
         }
@@ -604,6 +608,17 @@ const MenuBar = memo(({ editor, zoom, setZoom, onImageUpload, imageInputRef, edi
 
             <div className="w-px h-6 bg-slate-200 mx-1" />
 
+            {/* AI Citation Assistant */}
+            <button
+                onClick={onCitationClick}
+                className="p-1.5 rounded hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 transition-colors"
+                title="AI Citation Assistant"
+            >
+                <Quote className="h-4 w-4" />
+            </button>
+
+            <div className="w-px h-6 bg-slate-200 mx-1" />
+
             {/* Line Spacing */}
             <div className="relative group">
                 <button
@@ -811,6 +826,9 @@ export default function EditorPage() {
     const [zoom, setZoom] = useState(1.0);
     const [showReport, setShowReport] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [showDocSettings, setShowDocSettings] = useState(false);
+    const [showCitationModal, setShowCitationModal] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { addToast } = useToast();
     const autoSaveTimeoutRef = useRef(null);
@@ -856,7 +874,7 @@ export default function EditorPage() {
 
     // Optimized auto-save with debouncing
     const handleAutoSave = useCallback(async (content, html) => {
-        if (id === 'new' || !doc?.id) return;
+        if (id === 'new' || !doc?.id || doc?.permission === 'read') return;
 
         setIsSaving(true);
         try {
@@ -899,6 +917,7 @@ export default function EditorPage() {
         {
             extensions: editorExtensions,
             content: doc?.content_html || doc?.content || '',
+            editable: doc?.permission !== 'read',
             editorProps: {
                 attributes: {
                     class: 'focus:outline-none relative outline-none border-none shadow-none',
@@ -919,7 +938,7 @@ export default function EditorPage() {
                 setEditorStateToken(prev => prev + 1);
             },
         },
-        [doc?.content_html, doc?.content, handleAutoSave]
+        [doc?.content_html, doc?.content, doc?.permission, handleAutoSave]
     );
 
     // Handle image upload
@@ -987,7 +1006,7 @@ export default function EditorPage() {
     }, [id, doc?.id]);
 
     const handleUpgrade = useCallback(async () => {
-        if (!editor) return;
+        if (!editor || doc?.permission === 'read') return;
 
         setIsUpgrading(true);
         addToast('Starting context expansion and academic analysis...', 'info');
@@ -1029,13 +1048,18 @@ export default function EditorPage() {
                 if (!editorElement) {
                     throw new Error('Editor element not found');
                 }
-                await exportToPDF(editorElement, fileName);
+                await exportToPDF(editorElement, fileName, {
+                    margins: doc?.margins,
+                    headerText: doc?.header_text
+                });
             } else if (format === 'Word') {
                 if (!editor) throw new Error('Editor not initialized');
                 const html = editor.getHTML();
                 await exportToWord(html, fileName, {
                     title: doc?.title,
-                    description: `Academic ${doc?.document_type || 'Document'} created with Docley`
+                    description: `Academic ${doc?.document_type || 'Document'} created with Docley`,
+                    headerText: doc?.header_text,
+                    margins: doc?.margins
                 });
             }
 
@@ -1049,6 +1073,37 @@ export default function EditorPage() {
         }
     }, [doc, editor, addToast]);
 
+    const handleSaveDocSettings = useCallback(async (newSettings) => {
+        if (!doc?.id) return;
+
+        try {
+            const updatedDoc = await updateDocument(doc.id, {
+                margins: newSettings.margins,
+                headerText: newSettings.headerText
+            });
+            setDoc(prev => ({
+                ...prev,
+                margins: updatedDoc.margins,
+                header_text: updatedDoc.header_text
+            }));
+
+            // Update editor pagination if needed
+            if (editor) {
+                editor.setOptions({
+                    pagination: {
+                        ...editor.options.pagination,
+                        margins: updatedDoc.margins
+                    }
+                });
+            }
+
+            addToast('Document settings saved', 'success');
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            addToast('Failed to save settings', 'error');
+        }
+    }, [doc?.id, editor, addToast]);
+
     const handleDelete = useCallback(async () => {
         if (id === 'new') {
             setShowDeleteConfirm(false);
@@ -1059,6 +1114,13 @@ export default function EditorPage() {
         }
 
         if (!doc?.id) return;
+        const handleInsertCitation = useCallback((citationHtml) => {
+            if (editor) {
+                editor.chain().focus().insertContent(citationHtml).run();
+                setShowCitationModal(false);
+                addToast('Citation inserted', 'success');
+            }
+        }, [editor, addToast]);
 
         try {
             await permanentlyDeleteDocument(doc.id);
@@ -1102,6 +1164,16 @@ export default function EditorPage() {
                 isOpen={showReport}
                 onClose={() => setShowReport(false)}
                 documentText={editor?.getText() || ''}
+            />
+
+            <DocumentSettingsModal
+                isOpen={showDocSettings}
+                onClose={() => setShowDocSettings(false)}
+                onSave={handleSaveDocSettings}
+                initialSettings={{
+                    margins: doc?.margins,
+                    headerText: doc?.header_text
+                }}
             />
 
             {/* Top Navigation Bar */}
@@ -1149,6 +1221,18 @@ export default function EditorPage() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-px h-6 bg-slate-200" />
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowShareModal(true)}
+                            className="bg-white border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+                        >
+                            <Share2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">Share</span>
+                        </Button>
+
                         <Button
                             variant="ghost"
                             size="sm"
@@ -1196,7 +1280,13 @@ export default function EditorPage() {
                                             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Settings</p>
                                         </div>
                                         <div className="py-1">
-                                            <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                            <button
+                                                onClick={() => {
+                                                    setShowDocSettings(true);
+                                                    setShowSettings(false);
+                                                }}
+                                                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                            >
                                                 <Settings className="h-4 w-4 text-slate-400" />
                                                 Document Settings
                                             </button>
@@ -1244,6 +1334,7 @@ export default function EditorPage() {
                     zoom={zoom}
                     setZoom={setZoom}
                     onImageUpload={handleImageSelect}
+                    onCitationClick={() => setShowCitationModal(true)}
                     imageInputRef={imageInputRef}
                     editorStateToken={editorStateToken}
                 />
@@ -1263,10 +1354,48 @@ export default function EditorPage() {
                         onClick={() => editor?.chain().focus().run()}
                         ref={editorRef}
                     >
-                        <EditorContent editor={editor} />
+                        <div
+                            className="editor-content-wrapper"
+                            style={{
+                                padding: doc?.margins ? `${doc.margins.top}px ${doc.margins.right}px ${doc.margins.bottom}px ${doc.margins.left}px` : '96px',
+                                position: 'relative'
+                            }}
+                        >
+                            {doc?.header_text && (
+                                <div
+                                    className="absolute top-0 left-0 right-0 text-center text-xs text-slate-400 font-medium"
+                                    style={{
+                                        height: doc.margins?.top ? `${doc.margins.top / 2}px` : '48px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        pointerEvents: 'none'
+                                    }}
+                                >
+                                    {doc.header_text}
+                                </div>
+                            )}
+                            <EditorContent editor={editor} />
+                        </div>
                     </div>
                 </div>
             </main>
+
+            {/* Citation Modal */}
+            <CitationModal
+                isOpen={showCitationModal}
+                onClose={() => setShowCitationModal(false)}
+                onInsert={handleInsertCitation}
+                currentStyle={doc?.citation_style}
+            />
+
+            {/* Share Modal */}
+            <ShareModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                documentId={doc?.id}
+                documentTitle={doc?.title}
+            />
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (

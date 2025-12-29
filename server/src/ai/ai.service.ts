@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, BadRequestException } from '@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
 import { DIAGNOSTIC_PROMPT } from './prompts/diagnostic';
+import { CITATION_PROMPT } from './prompts/citation';
 
 dotenv.config();
 
@@ -50,8 +51,12 @@ export class AiService {
             Return a JSON object with a single key "result" containing the improved text as valid HTML fragments (paragraphs, bold, etc).
             Example: { "result": "<p>Improved text...</p>" }
             `;
+        } else if (mode === 'citation') {
+            prompt = CITATION_PROMPT
+                .replace('{{TEXT}}', text)
+                .replace('{{STYLE}}', instruction || 'APA 7th Edition');
         } else {
-            throw new BadRequestException('Invalid mode. Supported modes: diagnostic, upgrade');
+            throw new BadRequestException('Invalid mode. Supported modes: diagnostic, upgrade, citation');
         }
 
         try {
@@ -74,7 +79,7 @@ export class AiService {
         } catch (error) {
             console.error('[AiService] Error generating content:', error);
             console.error('[AiService] Error Details:', JSON.stringify(error, null, 2));
-            throw new InternalServerErrorException(`Failed to generate content: ${error.message}`);
+            throw new InternalServerErrorException(`Failed to generate content: ${error.message} `);
         }
     }
 }

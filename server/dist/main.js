@@ -41,6 +41,7 @@ const app_module_1 = require("./app.module");
 const common_1 = require("@nestjs/common");
 const dotenv = __importStar(require("dotenv"));
 const helmet_1 = __importDefault(require("helmet"));
+const global_exception_filter_1 = require("./common/filters/global-exception.filter");
 const compression = require('compression');
 dotenv.config();
 async function bootstrap() {
@@ -76,6 +77,7 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
         transform: true,
     }));
+    app.useGlobalFilters(new global_exception_filter_1.GlobalExceptionFilter());
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Server is listening on port ${port}`);

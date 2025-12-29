@@ -1,5 +1,5 @@
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Media } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Media, Header } from 'docx';
 
 /**
  * Convert oklch color to RGB hex
@@ -9,12 +9,12 @@ function oklchToRgb(oklchString) {
     if (oklchString.startsWith('#')) {
         return oklchString;
     }
-    
+
     // If it's rgb/rgba, return it
     if (oklchString.startsWith('rgb')) {
         return oklchString;
     }
-    
+
     // Default fallback for oklch (convert to dark gray)
     return '#1e293b';
 }
@@ -24,7 +24,7 @@ function oklchToRgb(oklchString) {
  */
 function sanitizeStyles(element) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
-    
+
     // Get computed styles
     const computed = window.getComputedStyle(element);
     const colorProps = [
@@ -32,7 +32,7 @@ function sanitizeStyles(element) {
         'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
         'outline-color', 'text-decoration-color', 'fill', 'stroke'
     ];
-    
+
     colorProps.forEach(prop => {
         try {
             const value = computed.getPropertyValue(prop);
@@ -44,7 +44,7 @@ function sanitizeStyles(element) {
             // Ignore errors
         }
     });
-    
+
     // Recursively sanitize children
     Array.from(element.children).forEach(child => sanitizeStyles(child));
 }
@@ -70,7 +70,8 @@ function deepCleanHTML(html) {
 /**
  * Export the editor content to a PDF file.
  */
-export const exportToPDF = async (element, fileName = 'document.pdf') => {
+export const exportToPDF = async (element, fileName = 'document.pdf', options = {}) => {
+    const { margins, headerText } = options;
     if (!element) {
         console.error('PDF Export Error: No element provided');
         throw new Error('Editor element not found');
@@ -90,13 +91,13 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
 
     // Clone the editor content - use deep clone to preserve all nodes
     const clone = element.cloneNode(true);
-    
+
     // Preserve the original HTML structure first
     const originalHTML = clone.innerHTML;
-    
+
     // Deep sanitize styles before cleaning HTML
     sanitizeStyles(clone);
-    
+
     // Clean HTML content but preserve structure
     clone.innerHTML = deepCleanHTML(originalHTML);
 
@@ -168,15 +169,30 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
                     }
                     .ProseMirror {
                         background: white !important;
-                        padding: 96px !important;
+                        padding: ${margins ? `${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px` : '96px'} !important;
                         width: 816px !important;
                         box-shadow: none !important;
                         margin: 0 !important;
                         color: #1e293b !important;
+                        position: relative;
+                    }
+                    .custom-header {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: ${margins?.top ? `${margins.top}px` : '96px'};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 11px;
+                        color: #64748b;
+                        pointer-events: none;
                     }
                     p {
                         margin-bottom: 1em;
                         line-height: 1.5;
+                        font-size: 12pt !important;
                         color: #1e293b !important;
                     }
                     h1, h2, h3, h4, h5, h6 {
@@ -217,7 +233,7 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
                     }
                 `;
                 clonedDoc.head.appendChild(essentialStyle);
-                
+
                 // Ensure all images are loaded and converted to base64 if needed
                 const clonedImages = clonedDoc.querySelectorAll('img');
                 clonedImages.forEach(img => {
@@ -227,6 +243,17 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
                         img.style.height = 'auto';
                     }
                 });
+
+                // Inject custom header if provided
+                if (headerText) {
+                    const headerDiv = clonedDoc.createElement('div');
+                    headerDiv.className = 'custom-header';
+                    headerDiv.innerText = headerText;
+                    const proseMirror = clonedDoc.querySelector('.ProseMirror');
+                    if (proseMirror) {
+                        proseMirror.prepend(headerDiv);
+                    }
+                }
 
                 // Sanitize all elements in cloned document
                 const allElements = clonedDoc.querySelectorAll('*');
@@ -259,10 +286,10 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
 
         // Use the container directly, not the clone
         const exporter = html2pdf().from(container).set(opt);
-        
+
         // Save the PDF
         await exporter.save();
-        
+
         console.log('PDF Export successful');
     } catch (error) {
         console.error('PDF Export failed details:', error);
@@ -276,9 +303,35 @@ export const exportToPDF = async (element, fileName = 'document.pdf') => {
 };
 
 /**
+ * Helper to fetch image and return as buffer/unit8array
+ */
+async function fetchImageAsBuffer(url) {
+    try {
+        if (url.startsWith('data:')) {
+            const base64Content = url.split(',')[1];
+            const binaryString = window.atob(base64Content);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch image');
+        const arrayBuffer = await response.arrayBuffer();
+        return arrayBuffer;
+    } catch (error) {
+        console.error('Error fetching image for DOCX:', error);
+        return null;
+    }
+}
+
+/**
  * Convert HTML to DOCX paragraphs
  */
-function htmlToDocxElements(htmlString) {
+async function htmlToDocxElements(htmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
     const elements = [];
@@ -331,7 +384,7 @@ function htmlToDocxElements(htmlString) {
     /**
      * Process block nodes (paragraphs, headings, etc.)
      */
-    function processBlockNode(node) {
+    async function processBlockNode(node) {
         if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent.trim();
             if (!text) return null;
@@ -350,40 +403,43 @@ function htmlToDocxElements(htmlString) {
         // Process inline children for formatting
         function getTextRuns(node) {
             const runs = [];
-            
+
             function traverse(n) {
                 if (n.nodeType === Node.TEXT_NODE) {
                     const text = n.textContent;
                     if (text.trim()) {
-                        runs.push(new TextRun(text));
+                        runs.push(new TextRun({ text, size: 24 })); // 12pt
                     }
                 } else if (n.nodeType === Node.ELEMENT_NODE) {
                     const tag = n.tagName.toLowerCase();
                     const children = Array.from(n.childNodes);
-                    
+                    const style = n.getAttribute('style') || '';
+                    const fontSizeMatch = style.match(/font-size:\s*(\d+)pt/);
+                    const size = fontSizeMatch ? parseInt(fontSizeMatch[1]) * 2 : 24;
+
                     if (tag === 'strong' || tag === 'b') {
                         const text = n.textContent;
                         if (text.trim()) {
-                            runs.push(new TextRun({ text, bold: true }));
+                            runs.push(new TextRun({ text, bold: true, size }));
                         }
                     } else if (tag === 'em' || tag === 'i') {
                         const text = n.textContent;
                         if (text.trim()) {
-                            runs.push(new TextRun({ text, italics: true }));
+                            runs.push(new TextRun({ text, italics: true, size }));
                         }
                     } else if (tag === 'u') {
                         const text = n.textContent;
                         if (text.trim()) {
-                            runs.push(new TextRun({ text, underline: {} }));
+                            runs.push(new TextRun({ text, underline: {}, size }));
                         }
                     } else {
                         children.forEach(child => traverse(child));
                     }
                 }
             }
-            
+
             traverse(node);
-            return runs.length > 0 ? runs : [new TextRun('')];
+            return runs.length > 0 ? runs : [new TextRun({ text: '', size: 24 })];
         }
 
         const textRuns = getTextRuns(node);
@@ -429,9 +485,15 @@ function htmlToDocxElements(htmlString) {
             case 'ul':
             case 'ol':
                 // Process list items
-                const listItems = Array.from(node.querySelectorAll('li'))
-                    .map(li => processBlockNode(li))
-                    .filter(Boolean);
+                const listItems = [];
+                const items = Array.from(node.querySelectorAll('li'));
+                for (const li of items) {
+                    const res = await processBlockNode(li);
+                    if (res) {
+                        if (Array.isArray(res)) listItems.push(...res);
+                        else listItems.push(res);
+                    }
+                }
                 return listItems;
             case 'blockquote':
                 return new Paragraph({
@@ -444,10 +506,29 @@ function htmlToDocxElements(htmlString) {
                     spacing: { after: 120 }
                 });
             case 'img':
-                // Handle images - create a paragraph with image placeholder
-                // Note: Full image support requires converting base64 to proper format
-                // For now, we'll add a text placeholder
+                // Handle images - convert to ImageRun
+                const imgSrc = node.getAttribute('src');
                 const imgAlt = node.getAttribute('alt') || 'Image';
+
+                if (imgSrc) {
+                    const imageBuffer = await fetchImageAsBuffer(imgSrc);
+                    if (imageBuffer) {
+                        return new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    data: imageBuffer,
+                                    transformation: {
+                                        width: 500, // Fixed width for now, could be dynamic
+                                        height: 300,
+                                    },
+                                }),
+                            ],
+                            spacing: { before: 200, after: 200 },
+                            alignment: 'center',
+                        });
+                    }
+                }
+
                 return new Paragraph({
                     children: [new TextRun({ text: `[${imgAlt}]`, italics: true })],
                     spacing: { after: 120 }
@@ -461,23 +542,33 @@ function htmlToDocxElements(htmlString) {
                     });
                 }
                 // Otherwise process children
-                const divChildren = Array.from(node.childNodes)
-                    .map(processBlockNode)
-                    .filter(Boolean);
+                const divChildren = [];
+                for (const childNode of Array.from(node.childNodes)) {
+                    const res = await processBlockNode(childNode);
+                    if (res) {
+                        if (Array.isArray(res)) divChildren.push(...res);
+                        else divChildren.push(res);
+                    }
+                }
                 return divChildren.length > 0 ? divChildren : null;
             default:
                 // For other block elements, process children
-                const children = Array.from(node.childNodes)
-                    .map(processBlockNode)
-                    .filter(Boolean);
-                return children.length > 0 ? children : null;
+                const otherChildren = [];
+                for (const childNode of Array.from(node.childNodes)) {
+                    const res = await processBlockNode(childNode);
+                    if (res) {
+                        if (Array.isArray(res)) otherChildren.push(...res);
+                        else otherChildren.push(res);
+                    }
+                }
+                return otherChildren.length > 0 ? otherChildren : null;
         }
     }
 
-    // Process body children
-    const body = doc.body;
-    Array.from(body.childNodes).forEach(node => {
-        const result = processBlockNode(node);
+    // Process body children using a recursive async approach for element resolution
+    const bodyChildren = Array.from(doc.body.childNodes);
+    for (const node of bodyChildren) {
+        const result = await processBlockNode(node);
         if (result) {
             if (Array.isArray(result)) {
                 elements.push(...result);
@@ -485,7 +576,7 @@ function htmlToDocxElements(htmlString) {
                 elements.push(result);
             }
         }
-    });
+    }
 
     // If no elements, add empty paragraph
     if (elements.length === 0) {
@@ -501,19 +592,48 @@ function htmlToDocxElements(htmlString) {
 export const exportToWord = async (htmlContent, fileName = 'document.docx', options = {}) => {
     console.log('Initiating Word Export for:', fileName);
 
-    const { title = 'Document', description = 'Academic Document created with Docley' } = options;
+    const {
+        title = 'Document',
+        description = 'Academic Document created with Docley',
+        margins,
+        headerText
+    } = options;
 
     try {
         // Clean HTML content
         const cleanHTML = deepCleanHTML(htmlContent);
-        
+
         // Convert HTML to DOCX elements
-        const docxElements = htmlToDocxElements(cleanHTML);
+        const docxElements = await htmlToDocxElements(cleanHTML);
 
         // Create DOCX document
         const doc = new Document({
             sections: [{
-                properties: {},
+                properties: {
+                    page: {
+                        margin: margins ? {
+                            top: (margins.top / 96) * 1440, // convert px to twips (approx)
+                            bottom: (margins.bottom / 96) * 1440,
+                            left: (margins.left / 96) * 1440,
+                            right: (margins.right / 96) * 1440,
+                        } : {
+                            top: 1440,
+                            bottom: 1440,
+                            left: 1440,
+                            right: 1440,
+                        }
+                    }
+                },
+                headers: headerText ? {
+                    default: new Header({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({ text: headerText, size: 18, color: "64748B" })],
+                                alignment: "center",
+                            }),
+                        ],
+                    }),
+                } : {},
                 children: docxElements
             }],
             title,
