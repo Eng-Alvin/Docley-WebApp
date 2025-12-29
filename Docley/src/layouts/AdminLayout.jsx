@@ -6,15 +6,17 @@ import {
     FileText,
     Settings,
     LogOut,
-    Sparkles,
     Menu,
     X,
     Shield,
-    Bell,
+    MessageSquare,
+    Activity,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
+import { DocleyLogo } from '../components/ui/DocleyLogo';
+import { NotificationBell } from '../components/ui/NotificationBell';
 import { cn } from '../lib/utils';
 
 export function AdminLayout() {
@@ -37,6 +39,7 @@ export function AdminLayout() {
         { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
         { icon: Users, label: 'Users', path: '/admin/users' },
         { icon: FileText, label: 'Blog Posts', path: '/admin/blog' },
+        { icon: MessageSquare, label: 'View Feedback', path: '/admin/feedback' },
         { icon: Settings, label: 'Settings', path: '/admin/settings' },
     ];
 
@@ -72,7 +75,7 @@ export function AdminLayout() {
                 )}>
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-blue-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                            <Sparkles className="h-5 w-5 text-white" />
+                            <span className="text-xl font-bold text-white">D</span>
                         </div>
                         <div>
                             <p className={cn("text-lg font-bold", isDark ? "text-white" : "text-slate-900")}>Docley Admin</p>
@@ -87,7 +90,8 @@ export function AdminLayout() {
                     </button>
                 </div>
 
-                <div className="px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar">
+                <div className="flex flex-col h-[calc(100vh-80px)] px-3 py-4">
+                    <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
                     <div className={cn(
                         "rounded-2xl p-3 border",
                         isDark ? "border-white/5 bg-white/5" : "border-slate-200 bg-white/70"
@@ -116,63 +120,100 @@ export function AdminLayout() {
                         </div>
                     </div>
 
-                    <nav className="space-y-1">
-                        {navItems.map((item) => (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                end={item.path === '/admin'}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={({ isActive }) => cn(
-                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                                    isActive
-                                        ? isDark
-                                            ? "bg-gradient-to-r from-orange-500/20 to-blue-500/10 text-white border border-white/10 shadow-lg shadow-orange-500/20"
-                                            : "bg-gradient-to-r from-orange-50 to-blue-50 text-slate-900 border border-orange-100 shadow-sm"
-                                        : isDark
-                                            ? "text-slate-300 hover:text-white hover:bg-white/5"
-                                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                                )}
-                            >
-                                <item.icon className={cn("h-5 w-5", isDark ? "text-slate-400 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")} />
-                                <span className="flex-1">{item.label}</span>
-                                {item.path === '/admin' && (
-                                    <span className={cn(
-                                        "text-[11px] px-2 py-0.5 rounded-full",
-                                        isDark ? "bg-orange-500/20 text-orange-100" : "bg-orange-100 text-orange-700"
-                                    )}>
-                                        Overview
-                                    </span>
-                                )}
-                            </NavLink>
-                        ))}
-                    </nav>
+                        <nav className="space-y-1">
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    end={item.path === '/admin'}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={({ isActive }) => cn(
+                                        "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                                        isActive
+                                            ? isDark
+                                                ? "bg-gradient-to-r from-orange-500/20 to-blue-500/10 text-white border border-white/10 shadow-lg shadow-orange-500/20"
+                                                : "bg-gradient-to-r from-orange-50 to-blue-50 text-slate-900 border border-orange-100 shadow-sm"
+                                            : isDark
+                                                ? "text-slate-300 hover:text-white hover:bg-white/5"
+                                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                                    )}
+                                >
+                                    <item.icon className={cn("h-5 w-5", isDark ? "text-slate-400 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")} />
+                                    <span className="flex-1">{item.label}</span>
+                                    {item.path === '/admin' && (
+                                        <span className={cn(
+                                            "text-[11px] px-2 py-0.5 rounded-full",
+                                            isDark ? "bg-orange-500/20 text-orange-100" : "bg-orange-100 text-orange-700"
+                                        )}>
+                                            Overview
+                                        </span>
+                                    )}
+                                </NavLink>
+                            ))}
+                        </nav>
 
-                    <div className={cn(
-                        "rounded-2xl p-3 border flex items-center justify-between",
-                        isDark ? "border-white/5 bg-white/5" : "border-slate-200 bg-white/70"
-                    )}>
-                        <div className="space-y-1">
-                            <p className={cn("text-xs font-semibold uppercase tracking-wide", isDark ? "text-slate-300" : "text-slate-600")}>Theme</p>
-                            <p className={cn("text-[11px]", isDark ? "text-slate-500" : "text-slate-500")}>
-                                Match the main Docley dashboard
-                            </p>
+                        {/* Quick Stats Widget */}
+                        <div className={cn(
+                            "rounded-2xl p-4 border mt-4",
+                            isDark ? "border-white/5 bg-gradient-to-br from-orange-500/10 to-blue-500/10" : "border-slate-200 bg-gradient-to-br from-orange-50 to-blue-50"
+                        )}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Activity className={cn("h-4 w-4", isDark ? "text-orange-400" : "text-orange-600")} />
+                                <p className={cn("text-xs font-semibold uppercase tracking-wide", isDark ? "text-orange-200" : "text-orange-700")}>
+                                    Quick Stats
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className={cn("text-xs", isDark ? "text-slate-300" : "text-slate-600")}>System Status</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        <span className={cn("text-xs font-medium", isDark ? "text-emerald-300" : "text-emerald-600")}>Healthy</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className={cn("text-xs", isDark ? "text-slate-300" : "text-slate-600")}>API Status</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+                                        <span className={cn("text-xs font-medium", isDark ? "text-blue-300" : "text-blue-600")}>Online</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className={cn("text-xs", isDark ? "text-slate-300" : "text-slate-600")}>Uptime</span>
+                                    <span className={cn("text-xs font-medium", isDark ? "text-slate-200" : "text-slate-700")}>99.9%</span>
+                                </div>
+                            </div>
                         </div>
-                        <ThemeToggle />
                     </div>
 
-                    <button
-                        onClick={handleSignOut}
-                        className={cn(
-                            "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors",
-                            isDark
-                                ? "bg-red-500/10 text-red-200 hover:bg-red-500/20"
-                                : "bg-red-50 text-red-600 hover:bg-red-100"
-                        )}
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                    </button>
+                    {/* Bottom section - THEME and Sign Out */}
+                    <div className="mt-auto pt-4 space-y-2 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)' }}>
+                        <div className={cn(
+                            "rounded-2xl p-3 border flex items-center justify-between",
+                            isDark ? "border-white/5 bg-white/5" : "border-slate-200 bg-white/70"
+                        )}>
+                            <div className="space-y-1">
+                                <p className={cn("text-xs font-semibold uppercase tracking-wide", isDark ? "text-slate-300" : "text-slate-600")}>Theme</p>
+                                <p className={cn("text-[11px]", isDark ? "text-slate-500" : "text-slate-500")}>
+                                    Match the main Docley dashboard
+                                </p>
+                            </div>
+                            <ThemeToggle />
+                        </div>
+
+                        <button
+                            onClick={handleSignOut}
+                            className={cn(
+                                "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                                isDark
+                                    ? "bg-red-500/10 text-red-200 hover:bg-red-500/20"
+                                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                            )}
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Sign Out
+                        </button>
+                    </div>
                 </div>
             </aside>
 
@@ -191,7 +232,7 @@ export function AdminLayout() {
                     </button>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-blue-500 flex items-center justify-center shadow-md shadow-orange-500/20">
-                            <Sparkles className="h-5 w-5 text-white" />
+                            <span className="text-xl font-bold text-white">D</span>
                         </div>
                         <div className="min-w-0">
                             <p className={cn("text-sm font-semibold uppercase tracking-wide", isDark ? "text-slate-300" : "text-slate-500")}>Admin Console</p>
@@ -206,12 +247,7 @@ export function AdminLayout() {
                             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                             Live
                         </div>
-                        <button className={cn(
-                            "p-2 rounded-lg border transition-colors",
-                            isDark ? "border-white/10 text-slate-200 hover:bg-white/10" : "border-slate-200 text-slate-700 hover:bg-slate-100"
-                        )}>
-                            <Bell className="h-5 w-5" />
-                        </button>
+                        <NotificationBell />
                         <ThemeToggle />
                     </div>
                 </header>
