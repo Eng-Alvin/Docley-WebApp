@@ -26,6 +26,7 @@ import {
     YAxis,
 } from 'recharts';
 import { getAdminUsers, getDashboardStats, updateUserStatus } from '../../services/adminService';
+import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
 
@@ -83,6 +84,27 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         loadData();
+    }, [loadData]);
+
+    // Real-time subscription for Admin
+    useEffect(() => {
+        const channel = supabase
+            .channel('admin_dashboard')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'documents' },
+                () => loadData()
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'users' },
+                () => loadData()
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [loadData]);
 
     // Delay chart rendering until client is mounted to avoid SSR/hydration chart issues
@@ -287,7 +309,7 @@ export default function AdminDashboard() {
                         </div>
                         <Activity className="h-5 w-5 text-slate-400" />
                     </div>
-                    <div className="h-72 min-h-[300px]">
+                    <div className="h-72 min-h-[350px]">
                         {chartsReady ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={mockActivityData}>

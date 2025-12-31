@@ -2,18 +2,49 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { User, Bell, CreditCard, Shield, Mail, Save, Key, Trash2, AlertTriangle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { updatePassword } from '../../services/usersService';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardSettings() {
     const { addToast } = useToast();
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
-        fullName: 'Alvyn Student',
-        email: 'student@university.edu',
+        fullName: '',
+        email: '',
         emailAlerts: true,
         marketing: false,
     });
+
+    // Populate data from user session and profile
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                email: user.email,
+                fullName: user.user_metadata?.full_name || '',
+            }));
+
+            // Fetch profile for more details if needed
+            const fetchProfile = async () => {
+                const { data } = await supabase
+                    .from('users')
+                    .select('full_name, email')
+                    .eq('id', user.id)
+                    .single();
+                if (data) {
+                    setFormData(prev => ({
+                        ...prev,
+                        fullName: data.full_name || user.user_metadata?.full_name,
+                        email: data.email || user.email
+                    }));
+                }
+            };
+            fetchProfile();
+        }
+    }, [user]);
 
     // Password change state
     const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -24,12 +55,28 @@ export default function DashboardSettings() {
     });
     const [showPasswords, setShowPasswords] = useState(false);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsSaving(true);
-        setTimeout(() => {
-            setIsSaving(false);
+        try {
+            // Update profile in public.users
+            const { error } = await supabase
+                .from('users')
+                .update({ full_name: formData.fullName })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            // Also update auth metadata
+            await supabase.auth.updateUser({
+                data: { full_name: formData.fullName }
+            });
+
             addToast('Settings saved successfully!', 'success');
-        }, 1000);
+        } catch (error) {
+            addToast('Failed to save settings: ' + error.message, 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handlePasswordChange = async (e) => {
@@ -47,7 +94,12 @@ export default function DashboardSettings() {
 
         setIsUpdatingPassword(true);
         try {
-            await updatePassword(passwordData.newPassword);
+            const { error } = await supabase.auth.updateUser({
+                password: passwordData.newPassword
+            });
+
+            if (error) throw error;
+
             addToast('Password updated successfully', 'success');
             setShowPasswordForm(false);
             setPasswordData({ newPassword: '', confirmPassword: '' });

@@ -5,8 +5,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import { ArrowLeft, Save, Loader2, Send, Image as ImageIcon, Tag, Link2, Hash } from 'lucide-react';
-import { getBlogPosts, createBlogPost, updateBlogPost } from '../../services/adminService';
+import { ArrowLeft, Save, Loader2, Send, Image as ImageIcon, Tag, Link2, Hash, UploadCloud, X } from 'lucide-react';
+import { getBlogPosts, createBlogPost, updateBlogPost, uploadBlogImage } from '../../services/adminService';
 import { useToast } from '../../context/ToastContext';
 
 export default function BlogPostEditor() {
@@ -15,6 +15,7 @@ export default function BlogPostEditor() {
     const { addToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false); // New state
     const [isLoading, setIsLoading] = useState(!!id);
 
     const [formData, setFormData] = useState({
@@ -197,8 +198,43 @@ export default function BlogPostEditor() {
                         />
 
                         {/* Editor - White Background */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 min-h-[500px]">
-                            <EditorContent editor={editor} />
+                        {/* Editor - White Background */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
+                            {/* Editor Toolbar */}
+                            <div className="border-b border-slate-100 p-2 flex items-center gap-2 sticky top-[72px] bg-white z-10 rounded-t-xl">
+                                <label className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+
+                                            // Show toast
+                                            const toastId = addToast('Uploading image...', 'info');
+
+                                            try {
+                                                const url = await uploadBlogImage(file);
+                                                if (url) {
+                                                    editor.chain().focus().setImage({ src: url }).run();
+                                                    addToast('Image inserted!', 'success');
+                                                }
+                                            } catch (error) {
+                                                addToast('Failed to upload image', 'error');
+                                            }
+                                        }}
+                                    />
+                                    <ImageIcon className="h-4 w-4" />
+                                    Insert Image
+                                </label>
+                                <div className="w-px h-6 bg-slate-200 mx-2" />
+                                {/* Add other toolbar buttons if needed (Bold, Italic, etc) */}
+                            </div>
+
+                            <div className="p-8 flex-1">
+                                <EditorContent editor={editor} />
+                            </div>
                         </div>
                     </div>
 
@@ -248,23 +284,73 @@ export default function BlogPostEditor() {
                                     <ImageIcon className="h-4 w-4 text-slate-400" />
                                     <h3 className="font-semibold text-slate-900 text-sm">Featured Image</h3>
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="https://example.com/image.jpg"
-                                    value={formData.cover_image}
-                                    onChange={(e) => setFormData({ ...formData, cover_image: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                                />
-                                {formData.cover_image && (
-                                    <div className="mt-3 aspect-video w-full rounded-lg overflow-hidden bg-slate-100 border border-slate-100">
-                                        <img
-                                            src={formData.cover_image}
-                                            alt="Preview"
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => e.target.style.display = 'none'}
+                                <div className="space-y-3">
+                                    {/* Upload Button */}
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            disabled={isUploading}
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+
+                                                setIsUploading(true);
+                                                try {
+                                                    const url = await uploadBlogImage(file);
+                                                    setFormData(prev => ({ ...prev, cover_image: url }));
+                                                    addToast('Image uploaded successfully', 'success');
+                                                } catch (error) {
+                                                    addToast('Failed to upload image', 'error');
+                                                } finally {
+                                                    setIsUploading(false);
+                                                }
+                                            }}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                                         />
+                                        <div className={`w-full border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center transition-colors ${isUploading ? 'bg-slate-50 border-slate-300' : 'border-slate-200 hover:border-orange-500 hover:bg-orange-50'}`}>
+                                            {isUploading ? (
+                                                <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <UploadCloud className="h-6 w-6 text-slate-400 mb-2" />
+                                                    <span className="text-xs font-medium text-slate-600">Click to upload cover</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
+
+                                    {/* URL Fallback */}
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Or paste image URL..."
+                                            value={formData.cover_image}
+                                            onChange={(e) => setFormData({ ...formData, cover_image: e.target.value })}
+                                            className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                                        />
+                                        {formData.cover_image && (
+                                            <button
+                                                onClick={() => setFormData({ ...formData, cover_image: '' })}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Preview */}
+                                    {formData.cover_image && (
+                                        <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-100 border border-slate-200 relative group">
+                                            <img
+                                                src={formData.cover_image}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Status */}

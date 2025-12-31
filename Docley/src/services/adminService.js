@@ -213,3 +213,35 @@ export async function deleteBlogPost(id) {
     }
 }
 
+
+// Upload Image to Supabase Storage
+export async function uploadBlogImage(file) {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+
+        // 1. Generate unique path
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // 2. Upload to 'blog-images' bucket
+        const { error: uploadError } = await supabase.storage
+            .from('blog-images')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        // 3. Get Public URL
+        const { data } = supabase.storage
+            .from('blog-images')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    } catch (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+    }
+}

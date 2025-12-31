@@ -32,6 +32,7 @@ import { getDocuments } from '../../services/documentsService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
 
 export default function DashboardHome() {
     const { user } = useAuth();
@@ -49,26 +50,50 @@ export default function DashboardHome() {
         recentActivity: []
     });
 
-    // Load recent documents
+
+
+    // ... inside component
+    // Load recent documents and setup real-time subscription
     useEffect(() => {
         loadDocuments();
+
+        // Real-time subscription
+        const channel = supabase
+            .channel('dashboard_updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'documents'
+                },
+                (payload) => {
+                    console.log('Real-time update:', payload);
+                    loadDocuments();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const loadDocuments = async () => {
         try {
             const docs = await getDocuments({ limit: 6 });
             setDocuments(docs);
-            
+
             // Calculate stats
             const allDocs = await getDocuments();
             const totalWords = allDocs.reduce((sum, doc) => sum + (doc.word_count || 0), 0);
             const upgradedCount = allDocs.filter(doc => doc.status === 'upgraded').length;
-            
+
             // Get recent activity (last 5 documents)
             const recentActivity = allDocs
                 .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
                 .slice(0, 5);
-            
+
             setStats({
                 totalDocuments: allDocs.length,
                 totalWords,
@@ -146,8 +171,8 @@ export default function DashboardHome() {
                 {/* Welcome Card */}
                 <div className={cn(
                     "lg:col-span-2 rounded-2xl border p-6 backdrop-blur-xl",
-                    isDark 
-                        ? "bg-white/5 border-white/10" 
+                    isDark
+                        ? "bg-white/5 border-white/10"
                         : "bg-gradient-to-br from-indigo-50 via-white to-orange-50/30 border-indigo-100/50"
                 )}>
                     <h1 className={cn(
@@ -162,7 +187,7 @@ export default function DashboardHome() {
                     )}>
                         Ready to transform your next assignment into submission-ready work?
                     </p>
-                    
+
                     {/* Quick Stats Row */}
                     <div className="flex flex-wrap gap-4 mt-4">
                         <div className={cn(
@@ -218,8 +243,8 @@ export default function DashboardHome() {
                 {/* Usage Progress Card */}
                 <div className={cn(
                     "rounded-2xl border p-6 backdrop-blur-xl",
-                    isDark 
-                        ? "bg-white/5 border-white/10" 
+                    isDark
+                        ? "bg-white/5 border-white/10"
                         : "bg-gradient-to-br from-white via-orange-50/30 to-white border-orange-100/50"
                 )}>
                     <div className="flex items-center justify-between mb-4">
@@ -237,7 +262,7 @@ export default function DashboardHome() {
                         </div>
                         <span className={cn(
                             "text-xs font-medium px-2 py-1 rounded-full",
-                            isDark 
+                            isDark
                                 ? "bg-orange-500/20 text-orange-400"
                                 : "bg-orange-100 text-orange-700"
                         )}>
@@ -260,7 +285,7 @@ export default function DashboardHome() {
                             "h-2 rounded-full overflow-hidden",
                             isDark ? "bg-white/10" : "bg-slate-200"
                         )}>
-                            <div 
+                            <div
                                 className={cn(
                                     "h-full rounded-full transition-all duration-500",
                                     stats.totalDocuments >= 3
@@ -288,8 +313,8 @@ export default function DashboardHome() {
             {/* Compact Hero Section */}
             <div className={cn(
                 "rounded-xl border p-4 md:p-5 backdrop-blur-xl",
-                isDark 
-                    ? "bg-white/5 border-white/10" 
+                isDark
+                    ? "bg-white/5 border-white/10"
                     : "bg-gradient-to-r from-indigo-50/50 to-orange-50/30 border-indigo-100/50"
             )}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -338,8 +363,8 @@ export default function DashboardHome() {
                             <Plus className="mr-1.5 h-4 w-4" /> New Assignment
                         </Button>
                         <Link to="/dashboard/documents">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 className={cn(
                                     "text-sm px-4 py-2 h-auto whitespace-nowrap",
                                     isDark
@@ -922,7 +947,7 @@ export default function DashboardHome() {
                                     "h-2 rounded-full overflow-hidden",
                                     isDark ? "bg-white/10" : "bg-slate-200"
                                 )}>
-                                    <div 
+                                    <div
                                         className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                                         style={{ width: `${Math.min((stats.totalWords / 50000) * 100, 100)}%` }}
                                     />
@@ -931,7 +956,7 @@ export default function DashboardHome() {
                                     "text-xs mt-2",
                                     isDark ? "text-slate-400" : "text-slate-500"
                                 )}>
-                                    {stats.totalWords >= 50000 
+                                    {stats.totalWords >= 50000
                                         ? "🎉 Amazing progress! You've written over 50K words!"
                                         : `${(50000 - stats.totalWords).toLocaleString()} words until 50K milestone`}
                                 </p>
@@ -951,7 +976,7 @@ export default function DashboardHome() {
                                         "text-lg font-bold",
                                         isDark ? "text-blue-400" : "text-blue-600"
                                     )}>
-                                        {stats.totalDocuments > 0 
+                                        {stats.totalDocuments > 0
                                             ? `${Math.round((stats.upgradedCount / stats.totalDocuments) * 100)}%`
                                             : '0%'}
                                     </span>
@@ -990,8 +1015,8 @@ export default function DashboardHome() {
                         <div className="space-y-3">
                             <div className={cn(
                                 "p-3 rounded-lg border-l-4",
-                                isDark 
-                                    ? "bg-white/5 border-orange-500/50" 
+                                isDark
+                                    ? "bg-white/5 border-orange-500/50"
                                     : "bg-white border-orange-500"
                             )}>
                                 <p className={cn(
@@ -1009,8 +1034,8 @@ export default function DashboardHome() {
                             </div>
                             <div className={cn(
                                 "p-3 rounded-lg border-l-4",
-                                isDark 
-                                    ? "bg-white/5 border-blue-500/50" 
+                                isDark
+                                    ? "bg-white/5 border-blue-500/50"
                                     : "bg-white border-blue-500"
                             )}>
                                 <p className={cn(
@@ -1028,8 +1053,8 @@ export default function DashboardHome() {
                             </div>
                             <div className={cn(
                                 "p-3 rounded-lg border-l-4",
-                                isDark 
-                                    ? "bg-white/5 border-green-500/50" 
+                                isDark
+                                    ? "bg-white/5 border-green-500/50"
                                     : "bg-white border-green-500"
                             )}>
                                 <p className={cn(
@@ -1068,8 +1093,8 @@ export default function DashboardHome() {
                         </p>
                     </div>
                     <Link to="/dashboard/documents">
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             className={cn(
                                 isDark
                                     ? "text-orange-400 hover:text-orange-300 hover:bg-white/10"
@@ -1143,8 +1168,8 @@ export default function DashboardHome() {
                                         <div className="flex items-start justify-between mb-4">
                                             <div
                                                 className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${doc.status === 'upgraded'
-                                                        ? 'bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-600'
-                                                        : 'bg-slate-100 text-slate-500'
+                                                    ? 'bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-600'
+                                                    : 'bg-slate-100 text-slate-500'
                                                     }`}
                                             >
                                                 <FileText className="h-6 w-6" />
