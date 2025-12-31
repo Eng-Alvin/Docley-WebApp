@@ -8,6 +8,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import DashboardDocuments from './pages/Dashboard/DashboardDocuments';
 import DashboardSettings from './pages/Dashboard/DashboardSettings';
+const TimetableGenerator = lazy(() => import('./pages/Dashboard/TimetableGenerator/TimetableGenerator'));
 import EditorPage from './pages/Editor/EditorPage';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
@@ -90,6 +91,11 @@ function App() {
               }>
                 <Route index element={<DashboardHome />} />
                 <Route path="documents" element={<DashboardDocuments />} />
+                <Route path="timetable" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <TimetableGenerator />
+                  </Suspense>
+                } />
                 <Route path="settings" element={<DashboardSettings />} />
               </Route>
 

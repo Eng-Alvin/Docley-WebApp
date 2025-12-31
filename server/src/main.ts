@@ -11,8 +11,37 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security: Set secure HTTP headers
-  app.use(helmet());
+  // Security: Set secure HTTP headers with relaxed CSP for SPA + dev
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // allow inline styles (React/Tailwind runtime)
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev + some libs
+          imgSrc: ["'self'", "data:", "blob:"],
+          fontSrc: ["'self'", "data:"],
+          connectSrc: [
+            "'self'",
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:5174',
+            'http://127.0.0.1:5174',
+            process.env.SUPABASE_URL || 'https://*.supabase.co',
+            'ws:',
+            'wss:',
+          ],
+          frameSrc: ["'self'", process.env.SUPABASE_URL || 'https://*.supabase.co'],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+        },
+      },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   // Performance: Compress responses
   app.use(compression());

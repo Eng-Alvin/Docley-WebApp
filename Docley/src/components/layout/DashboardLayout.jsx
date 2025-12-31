@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import {
     LayoutDashboard,
     FileText,
+    Calendar,
     Settings,
     Menu,
     X,
@@ -46,6 +47,7 @@ export function DashboardLayout() {
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'My Documents', href: '/dashboard/documents', icon: FileText },
+        { name: 'Timetable', href: '/dashboard/timetable', icon: Calendar },
         { name: 'Settings', href: '/dashboard/settings', icon: Settings },
         // Conditionally add Admin link
         ...(user && isAdminEmail(user.email) ? [{ name: 'Admin Panel', href: '/admin', icon: Shield }] : []),
@@ -332,6 +334,7 @@ export function DashboardLayout() {
                             )}>
                                 {location.pathname === '/dashboard' ? 'Dashboard' :
                                  location.pathname.includes('/documents') ? 'My Documents' :
+                                 location.pathname.includes('/timetable') ? 'Smart Timetable' :
                                  location.pathname.includes('/settings') ? 'Settings' :
                                  'Dashboard'}
                             </h1>
