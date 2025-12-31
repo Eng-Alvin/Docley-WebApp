@@ -113,4 +113,35 @@ export class UsersService {
 
         return data;
     }
+
+    /**
+     * Sync user profile from Auth to public.users table
+     */
+    async syncUser(user: any) {
+        // user object comes from Supabase Auth (JWT)
+        const profile = {
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+            updated_at: new Date().toISOString()
+        };
+
+        const { data, error } = await this.client
+            .from('users')
+            .upsert(profile, { onConflict: 'id' })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Failed to sync user profile:', error);
+            // Don't throw error to avoid blocking login if sync fails
+            return null;
+        }
+
+        // Also ensure usage record exists
+        await this.getOrCreateUsage(user.id);
+
+        return data;
+    }
 }

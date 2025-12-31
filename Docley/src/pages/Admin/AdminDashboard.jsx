@@ -287,7 +287,7 @@ export default function AdminDashboard() {
                         </div>
                         <Activity className="h-5 w-5 text-slate-400" />
                     </div>
-                    <div className="h-72">
+                    <div className="h-72 min-h-[300px]">
                         {chartsReady ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={mockActivityData}>

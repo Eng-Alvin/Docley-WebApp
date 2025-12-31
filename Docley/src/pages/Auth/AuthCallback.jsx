@@ -32,6 +32,14 @@ export default function AuthCallback() {
 
                         if (error) throw error;
 
+                        // Sync user profile (creates usage record)
+                        try {
+                            const { syncUserProfile } = await import('../../services/userService');
+                            await syncUserProfile();
+                        } catch (e) {
+                            console.error('Sync failed', e);
+                        }
+
                         setStatus('success');
                         setMessage('Email verified successfully!');
 
@@ -46,6 +54,14 @@ export default function AuthCallback() {
                         if (error) throw error;
 
                         if (session) {
+                            // Sync user profile (creates usage record)
+                            try {
+                                const { syncUserProfile } = await import('../../services/userService');
+                                await syncUserProfile();
+                            } catch (e) {
+                                console.error('Sync failed', e);
+                            }
+
                             setStatus('success');
                             setMessage('Email verified successfully!');
                             setTimeout(() => {
@@ -66,6 +82,15 @@ export default function AuthCallback() {
                     if (error) throw error;
 
                     if (session) {
+                        // Sync user profile with backend
+                        try {
+                            // Dynamically import to avoid circular dependencies if any (safe practice)
+                            const { syncUserProfile } = await import('../../services/userService');
+                            await syncUserProfile();
+                        } catch (e) {
+                            console.error('Sync failed', e);
+                        }
+
                         setStatus('success');
                         setMessage('Successfully signed in!');
                         setTimeout(() => {

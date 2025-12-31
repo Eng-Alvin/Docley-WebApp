@@ -29,7 +29,7 @@ export default function BlogPostEditor() {
         extensions: [
             StarterKit,
             Image,
-            Link.configure({ openOnClick: false }),
+            // Link.configure({ openOnClick: false }), // Removed to fix duplicate warning
             Placeholder.configure({
                 placeholder: 'Start writing your post content here...',
             }),
