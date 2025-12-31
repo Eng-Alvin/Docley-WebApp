@@ -67,20 +67,51 @@ export class AdminService {
         const userCount = usersError ? 0 : users?.length || 0;
 
         // 2. Count documents
-        const { count: documentCount, error: docsError } = await this.supabase
+        const { count: documentCount } = await this.supabase
             .from('documents')
             .select('*', { count: 'exact', head: true });
 
-        // 3. AI Usage Today (Placeholder - requires an 'ai_logs' table or similar)
-        // For now, return 0. A real implementation would query a dedicated logging table.
-        // const today = new Date().toISOString().split('T')[0];
-        // const { count: aiUsage } = await this.supabase.from('ai_logs').select('*', { count: 'exact', head: true }).gte('created_at', today);
-        const aiUsage = 0; // Placeholder
+        // 3. Global AI Token Usage (RPC)
+        const { data: totalTokens, error: rpcError } = await this.supabase
+            .rpc('get_total_tokens');
+
+        if (rpcError) {
+            console.error('Error fetching total tokens:', rpcError);
+        }
 
         return {
             users: userCount,
             documents: documentCount ?? 0,
-            aiUsage: aiUsage,
+            aiTokens: totalTokens || 0,
         };
+    }
+
+    async getRecentActivity() {
+        // Fetch last 5 documents
+        const { data: documents, error } = await this.supabase
+            .from('documents')
+            .select('id, title, created_at, user_id')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        if (error) {
+            throw new Error(`Failed to fetch recent activity: ${error.message}`);
+        }
+
+        // Enrich with user info
+        // We fetching users 1-by-1 for these 5 docs. Efficient enough for small batch.
+        const activity = await Promise.all(documents.map(async (doc) => {
+            // Safe user fetch
+            const { data: { user } } = await this.supabase.auth.admin.getUserById(doc.user_id);
+            return {
+                id: doc.id,
+                fileName: doc.title || 'Untitled Document',
+                userEmail: user?.email || 'Unknown User',
+                action: 'created document',
+                time: doc.created_at
+            };
+        }));
+
+        return activity;
     }
 }

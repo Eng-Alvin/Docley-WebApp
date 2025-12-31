@@ -37,7 +37,24 @@ export async function getDashboardStats() {
         return await response.json();
     } catch (error) {
         console.error('Error fetching admin stats:', error);
-        return { users: 0, documents: 0, aiUsage: 0 };
+        return { users: 0, documents: 0, aiTokens: 0 };
+    }
+}
+
+// Get Recent Admin Activity
+export async function getAdminActivity() {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/admin/activity`, { headers });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch activity');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching admin activity:', error);
+        return [];
     }
 }
 

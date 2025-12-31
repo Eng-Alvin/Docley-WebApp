@@ -12,6 +12,11 @@ export class AdminController {
         return this.adminService.getStats();
     }
 
+    @Get('activity')
+    async getRecentActivity() {
+        return this.adminService.getRecentActivity();
+    }
+
     @Get('users')
     async listUsers() {
         return this.adminService.listUsers();

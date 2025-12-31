@@ -25,23 +25,14 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { getAdminUsers, getDashboardStats, updateUserStatus } from '../../services/adminService';
+import { getAdminUsers, getDashboardStats, updateUserStatus, getAdminActivity } from '../../services/adminService';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
-import { cn } from '../../lib/utils';
+import { cn } from '../../lib/utils';;
 
 // Mock data for charts
 const mockSparkline = [
     { v: 40 }, { v: 55 }, { v: 48 }, { v: 62 }, { v: 58 }, { v: 70 }, { v: 85 },
-];
-
-const mockActivityData = [
-    { time: '6am', docs: 20, transforms: 15 },
-    { time: '9am', docs: 80, transforms: 60 },
-    { time: '12pm', docs: 120, transforms: 90 },
-    { time: '3pm', docs: 150, transforms: 110 },
-    { time: '6pm', docs: 100, transforms: 80 },
-    { time: '9pm', docs: 60, transforms: 40 },
 ];
 
 const mockEvents = [
@@ -55,8 +46,9 @@ export default function AdminDashboard() {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
-    const [stats, setStats] = useState({ users: 0, documents: 0, aiUsage: 0 });
+    const [stats, setStats] = useState({ users: 0, documents: 0, aiTokens: 0 }); // aiTokens default
     const [users, setUsers] = useState([]);
+    const [activityFeed, setActivityFeed] = useState([]); // New state
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -66,12 +58,14 @@ export default function AdminDashboard() {
 
     const loadData = useCallback(async () => {
         try {
-            const [statsData, usersData] = await Promise.all([
+            const [statsData, usersData, activityData] = await Promise.all([
                 getDashboardStats(),
                 getAdminUsers(),
+                getAdminActivity()
             ]);
             setStats(statsData);
             setUsers(usersData);
+            setActivityFeed(activityData || []);
             setError(null);
         } catch (err) {
             console.error('Failed to load dashboard data:', err);
@@ -135,6 +129,34 @@ export default function AdminDashboard() {
         (u.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()),
     );
 
+    const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+    // Initial load for maintenance status
+    useEffect(() => {
+        const fetchMaintenance = async () => {
+            const { data } = await supabase.from('global_settings').select('maintenance_active').single();
+            if (data) setMaintenanceMode(data.maintenance_active);
+        };
+        fetchMaintenance();
+    }, []);
+
+    const toggleMaintenance = async () => {
+        const newValue = !maintenanceMode;
+        setMaintenanceMode(newValue); // Optimistic UI
+
+        try {
+            const { error } = await supabase
+                .from('global_settings')
+                .update({ maintenance_active: newValue })
+                .eq('id', 1);
+
+            if (error) throw error;
+        } catch (err) {
+            console.error('Failed to toggle maintenance:', err);
+            setMaintenanceMode(!newValue); // Revert
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -164,6 +186,21 @@ export default function AdminDashboard() {
                             {error}
                         </span>
                     )}
+
+                    {/* Maintenance Toggle */}
+                    <button
+                        onClick={toggleMaintenance}
+                        className={cn(
+                            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border',
+                            maintenanceMode
+                                ? 'bg-red-500 text-white border-red-600 hover:bg-red-600 shadow-red-500/20 shadow-lg animate-pulse'
+                                : 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
+                        )}
+                    >
+                        <Zap className={cn('h-3 w-3', maintenanceMode && 'fill-current')} />
+                        {maintenanceMode ? 'Maintenance ON' : 'System Normal'}
+                    </button>
+
                     <button
                         onClick={handleRefresh}
                         disabled={isRefreshing}
@@ -235,7 +272,7 @@ export default function AdminDashboard() {
                     )}
                 >
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wide dark:text-slate-400">
-                        AI Usage Today
+                        Total AI Credits Used
                     </p>
                     <div className="flex items-center justify-between mt-2">
                         <div className="w-16 h-16">
@@ -244,8 +281,8 @@ export default function AdminDashboard() {
                                     <PieChart>
                                         <Pie
                                             data={[
-                                                { value: stats.aiUsage || 0 },
-                                                { value: 100 - (stats.aiUsage || 0) },
+                                                { value: stats.aiTokens || 0 }, // Using aiTokens from backend
+                                                { value: 10000 - (stats.aiTokens || 0) }, // Arbitrary max for visual
                                             ]}
                                             cx="50%"
                                             cy="50%"
@@ -263,8 +300,8 @@ export default function AdminDashboard() {
                             )}
                         </div>
                         <div className="text-right">
-                            <h3 className="text-2xl font-bold">{stats.aiUsage || 0}</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">transformations</p>
+                            <h3 className="text-2xl font-bold">{stats.aiTokens?.toLocaleString() || 0}</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">tokens used</p>
                         </div>
                     </div>
                 </div>
@@ -293,7 +330,7 @@ export default function AdminDashboard() {
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-6">
-                {/* Activity Heatmap Chart */}
+                {/* Recent Transformations Feed */}
                 <div
                     className={cn(
                         'rounded-xl p-6 border shadow-sm',
@@ -302,49 +339,67 @@ export default function AdminDashboard() {
                 >
                     <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h3 className="text-lg font-bold">Activity Heatmap</h3>
+                            <h3 className="text-lg font-bold">Recent Transformations</h3>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Document creations vs AI transforms
+                                Live feed of document activity
                             </p>
                         </div>
                         <Activity className="h-5 w-5 text-slate-400" />
                     </div>
-                    <div className="h-72 min-h-[350px]">
-                        {chartsReady ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={mockActivityData}>
-                                    <defs>
-                                        <linearGradient id="gradientDocs" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="gradientTransforms" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} vertical={false} />
-                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <Tooltip contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
-                                    <Area type="monotone" dataKey="docs" stroke="#6366f1" strokeWidth={2} fill="url(#gradientDocs)" name="Documents" />
-                                    <Area type="monotone" dataKey="transforms" stroke="#8b5cf6" strokeWidth={2} fill="url(#gradientTransforms)" name="AI Transforms" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full w-full rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
-                        )}
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/10">
+                                    <th className="pb-3">User</th>
+                                    <th className="pb-3">Document</th>
+                                    <th className="pb-3 text-right">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                {activityFeed.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={3} className="py-4 text-center text-slate-500 text-sm">
+                                            No recent activity
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    activityFeed.map((item) => (
+                                        <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                            <td className="py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-6 w-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold">
+                                                        {item.userEmail?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                        {item.userEmail}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3">
+                                                <span className="text-sm text-slate-600 dark:text-slate-300">
+                                                    {item.fileName}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 text-right text-xs text-slate-400">
+                                                {new Date(item.time).toLocaleTimeString()}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                {/* Recent Events */}
+                {/* Recent Events (System Logs) */}
                 <div
                     className={cn(
                         'rounded-xl p-6 border shadow-sm',
                         isDark ? 'bg-slate-900/70 border-white/10' : 'bg-white border-slate-200',
                     )}
                 >
-                    <h3 className="text-lg font-bold mb-4">Recent Events</h3>
+                    <h3 className="text-lg font-bold mb-4">System Logs</h3>
                     <ul className="space-y-3">
                         {mockEvents.map((event) => (
                             <li key={event.id} className="flex items-start gap-3">
