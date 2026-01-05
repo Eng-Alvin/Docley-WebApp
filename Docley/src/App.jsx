@@ -49,20 +49,32 @@ function LoadingFallback() {
 
 // Maintenance Guard Component
 function MaintenanceGuard({ children }) {
+  // 1. All hooks at the VERY top
+  const { isInitializing, isAdmin } = useAuth();
   const [isMaintenance, setIsMaintenance] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user, loading: authLoading } = useAuth();
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
   useEffect(() => {
-    // Check initial status
     const checkMaintenance = async () => {
-      const { data } = await supabase.from('global_settings').select('maintenance_active').single();
-      if (data) setIsMaintenance(data.maintenance_active);
-      setIsLoading(false);
+      try {
+        const { data, error } = await supabase.from('global_settings')
+          .select('maintenance_active')
+          .eq('id', 1)
+          .maybeSingle();
+
+        if (error) {
+          console.warn('Maintenance check failed:', error.message);
+        } else if (data) {
+          setIsMaintenance(data.maintenance_active);
+        }
+      } catch (err) {
+        console.error('Error checking maintenance mode:', err);
+      } finally {
+        setIsSettingsLoading(false);
+      }
     };
     checkMaintenance();
 
-    // Listen for changes
     const channel = supabase
       .channel('maintenance_mode')
       .on(
@@ -79,16 +91,33 @@ function MaintenanceGuard({ children }) {
     };
   }, []);
 
-  if (isLoading || authLoading) return <LoadingFallback />;
+  // 2. No early returns before the hooks above
 
-  // Allow Admins to bypass
-  const isAdmin = user?.app_metadata?.role === 'admin' || user?.user_metadata?.role === 'admin';
+  // Show a simple skeleton while initializing (covers both auth and settings)
+  if (isInitializing || isSettingsLoading) {
+    return <InitializingSkeleton />;
+  }
 
+  // If maintenance is on and user is not admin, show maintenance page
   if (isMaintenance && !isAdmin) {
     return <MaintenancePage />;
   }
 
   return children;
+}
+
+// Minimal initialization screen
+function InitializingSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-full max-w-xs space-y-4 px-4">
+        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+          <div className="h-full bg-indigo-500 animate-[progress_2s_ease-in-out_infinite]" style={{ width: '40%' }}></div>
+        </div>
+        <p className="text-center text-slate-400 text-xs font-medium uppercase tracking-widest">Docley is Preparing...</p>
+      </div>
+    </div>
+  );
 }
 
 function App() {

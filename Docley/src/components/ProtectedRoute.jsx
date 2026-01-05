@@ -5,19 +5,12 @@ import { useAuth } from '../context/AuthContext';
 const ADMIN_EMAIL = 'maindocley@gmail.com';
 
 export function ProtectedRoute({ children }) {
-    const { user, loading, isEmailVerified } = useAuth();
+    const { user, loading } = useAuth();
     const location = useLocation();
 
-    // Show loading state while checking auth
+    // 1. Boot loading
     if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                    <p className="mt-4 text-slate-600">Loading...</p>
-                </div>
-            </div>
-        );
+        return <AuthLoadingScreen />;
     }
 
     // Redirect to login if not authenticated
@@ -33,16 +26,9 @@ export function PublicRoute({ children }) {
     const { user, loading } = useAuth();
     const location = useLocation();
 
-    // Show loading state while checking auth
+    // 1. Boot loading
     if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                    <p className="mt-4 text-slate-600">Loading...</p>
-                </div>
-            </div>
-        );
+        return <AuthLoadingScreen />;
     }
 
     // Redirect to dashboard if already authenticated
@@ -55,37 +41,42 @@ export function PublicRoute({ children }) {
     return children;
 }
 
-// Admin-only route - restricts access to specific email
+// Admin-only route - restricts access to specific database role
 export function AdminOnlyRoute({ children }) {
-    const { user, loading } = useAuth();
+    const { user, isAdmin, isInitializing } = useAuth();
 
-    // Show loading state while checking auth
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                    <p className="mt-4 text-slate-600">Loading...</p>
-                </div>
-            </div>
-        );
+    // 1. Initial boot loading
+    if (isInitializing) {
+        return <AuthLoadingScreen />;
     }
 
-    // Redirect to login if not authenticated
+    // 2. Redirect to login if not authenticated
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // Redirect to dashboard if not the admin email
-    if (user.email !== ADMIN_EMAIL) {
+    // 3. Strict admin check (respects DB role + fallback)
+    if (!isAdmin) {
+        console.warn('[Security] Access denied: Required Admin role');
         return <Navigate to="/dashboard" replace />;
     }
 
-    // Admin user - render the children
+    // 4. Admin verified
     return children;
 }
 
+// Helper component for loading state
+function AuthLoadingScreen() {
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p className="mt-4 text-slate-600">Verifying access...</p>
+            </div>
+        </div>
+    );
+}
+
 // Export admin email check helper for use in sidebars
-export const isAdminEmail = (email) => email === ADMIN_EMAIL;
-export { ADMIN_EMAIL };
+export const isAdminEmail = (email) => email === 'maindocley@gmail.com';
 

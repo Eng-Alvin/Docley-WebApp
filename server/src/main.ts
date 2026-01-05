@@ -9,7 +9,9 @@ const compression = require('compression');
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   // Security: Set secure HTTP headers with relaxed CSP for SPA + dev
   app.use(

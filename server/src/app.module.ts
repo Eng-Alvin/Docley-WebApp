@@ -10,13 +10,14 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { AdminModule } from './admin/admin.module';
 import { PostsModule } from './posts/posts.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
     // Rate limiting configuration
     ThrottlerModule.forRoot([{
       ttl: 60000, // 1 minute in milliseconds
-      limit: 60,  // 60 requests per minute globally
+      limit: 30,  // 60 requests per minute globally
     }]),
     AiModule,
     UsersModule,
@@ -25,6 +26,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AdminModule,
     PostsModule,
     NotificationsModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [

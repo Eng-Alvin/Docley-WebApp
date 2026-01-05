@@ -22,7 +22,6 @@ import { ThemeToggle } from '../ui/ThemeToggle';
 import { DocleyLogo } from '../ui/DocleyLogo';
 import { OnboardingFlow, isOnboardingCompleted } from '../onboarding/OnboardingFlow';
 import { submitFeedback } from '../../services/feedbackService';
-import { isAdminEmail } from '../ProtectedRoute';
 
 export function DashboardLayout() {
     const location = useLocation();
@@ -34,7 +33,7 @@ export function DashboardLayout() {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { theme } = useTheme();
-    const { user, signOut } = useAuth();
+    const { user, profile, isAdmin, signOut } = useAuth();
     const isDark = theme === 'dark';
 
     // Check onboarding on mount
@@ -50,7 +49,7 @@ export function DashboardLayout() {
         { name: 'Timetable', href: '/dashboard/timetable', icon: Calendar },
         { name: 'Settings', href: '/dashboard/settings', icon: Settings },
         // Conditionally add Admin link
-        ...(user && isAdminEmail(user.email) ? [{ name: 'Admin Panel', href: '/admin', icon: Shield }] : []),
+        ...(isAdmin ? [{ name: 'Admin Panel', href: '/admin', icon: Shield }] : []),
     ];
 
     const isActive = (path) => {
@@ -70,6 +69,9 @@ export function DashboardLayout() {
 
     // Get user's display name
     const getUserDisplayName = () => {
+        if (profile?.full_name) {
+            return profile.full_name.split(' ')[0];
+        }
         if (user?.user_metadata?.full_name) {
             return user.user_metadata.full_name.split(' ')[0];
         }
@@ -81,6 +83,13 @@ export function DashboardLayout() {
 
     // Get user's initials
     const getUserInitials = () => {
+        if (profile?.full_name) {
+            const names = profile.full_name.split(' ');
+            if (names.length >= 2) {
+                return (names[0][0] + names[1][0]).toUpperCase();
+            }
+            return names[0][0].toUpperCase();
+        }
         if (user?.user_metadata?.full_name) {
             const names = user.user_metadata.full_name.split(' ');
             if (names.length >= 2) {
@@ -333,10 +342,10 @@ export function DashboardLayout() {
                                 isDark ? "text-white" : "text-slate-900"
                             )}>
                                 {location.pathname === '/dashboard' ? 'Dashboard' :
-                                 location.pathname.includes('/documents') ? 'My Documents' :
-                                 location.pathname.includes('/timetable') ? 'Smart Timetable' :
-                                 location.pathname.includes('/settings') ? 'Settings' :
-                                 'Dashboard'}
+                                    location.pathname.includes('/documents') ? 'My Documents' :
+                                        location.pathname.includes('/timetable') ? 'Smart Timetable' :
+                                            location.pathname.includes('/settings') ? 'Settings' :
+                                                'Dashboard'}
                             </h1>
                         </div>
                     </div>
@@ -438,7 +447,7 @@ export function DashboardLayout() {
                                                         "text-sm font-semibold truncate",
                                                         isDark ? "text-white" : "text-slate-900"
                                                     )}>
-                                                        {user?.user_metadata?.full_name || getUserDisplayName()}
+                                                        {profile?.full_name || user?.user_metadata?.full_name || getUserDisplayName()}
                                                     </p>
                                                     <p className={cn(
                                                         "text-xs truncate",
