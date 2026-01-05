@@ -1,21 +1,33 @@
 import { cn } from '../../lib/utils';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Official Docley Logo Component
- * Features gradient text with stylized D letter
+ * Features the Docley logo image with text, styled similar to Eden logo
  */
 export function DocleyLogo({ className, size = 'default', showTagline = false, iconOnly = false }) {
-    const sizeClasses = {
-        sm: 'text-xl',
-        default: 'text-2xl',
-        lg: 'text-4xl',
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    const sizeConfig = {
+        sm: {
+            logoSize: 'h-6 w-6',
+            textSize: 'text-lg',
+            gap: 'gap-1.5',
+        },
+        default: {
+            logoSize: 'h-8 w-8',
+            textSize: 'text-xl',
+            gap: 'gap-2',
+        },
+        lg: {
+            logoSize: 'h-10 w-10',
+            textSize: 'text-2xl',
+            gap: 'gap-2.5',
+        },
     };
 
-    const iconSizeClasses = {
-        sm: 'h-8 w-8 text-lg',
-        default: 'h-10 w-10 text-xl',
-        lg: 'h-12 w-12 text-2xl',
-    };
+    const config = sizeConfig[size] || sizeConfig.default;
 
     if (iconOnly) {
         return (
@@ -24,46 +36,47 @@ export function DocleyLogo({ className, size = 'default', showTagline = false, i
                 className
             )}>
                 <div className={cn(
-                    "flex items-center justify-center font-bold rounded-xl transition-all duration-300",
-                    "bg-gradient-to-br from-orange-500 via-orange-600 to-blue-600",
-                    "shadow-[0_0_15px_rgba(249,115,22,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.5)]",
-                    "group-hover:scale-105 group-hover:rotate-3",
-                    iconSizeClasses[size] || iconSizeClasses.default
+                    "flex items-center justify-center rounded-xl transition-all duration-300 overflow-hidden",
+                    "group-hover:scale-105",
+                    config.logoSize
                 )}>
-                    <span className="text-white drop-shadow-md">D</span>
-                    {/* Glossy overlay effect */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-xl pointer-events-none" />
+                    <img
+                        src="/docley-logo.png"
+                        alt="Docley"
+                        className="h-full w-full object-contain"
+                    />
                 </div>
-                {/* Subtle outer glow */}
-                <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </div>
         );
     }
 
     return (
-        <div className={cn('flex items-center gap-2', className)}>
-            {/* Stylized D with gradient */}
+        <div className={cn('flex items-center', config.gap, className)}>
+            {/* Logo Image */}
             <div className={cn(
-                'font-bold leading-none',
-                sizeClasses[size] || sizeClasses.default
+                'flex-shrink-0 rounded-lg overflow-hidden',
+                config.logoSize
             )}>
-                <span className="inline-block bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 bg-clip-text text-transparent drop-shadow-lg">
-                    D
-                </span>
+                <img
+                    src="/docley-logo.png"
+                    alt="Docley"
+                    className="h-full w-full object-contain"
+                />
             </div>
-            
-            {/* Gradient text for 'ocley' */}
+
+            {/* Brand Name */}
             <span className={cn(
-                'font-bold leading-none bg-gradient-to-r from-orange-500 via-red-500 via-purple-500 to-blue-500 bg-clip-text text-transparent',
-                sizeClasses[size]
+                'font-bold tracking-tight',
+                config.textSize,
+                isDark ? 'text-white' : 'text-slate-900'
             )}>
-                ocley
+                Docley
             </span>
-            
+
             {showTagline && (
                 <span className={cn(
                     'text-xs uppercase tracking-wider ml-2',
-                    'text-slate-500 dark:text-slate-400'
+                    isDark ? 'text-slate-400' : 'text-slate-500'
                 )}>
                     Academic Transformer
                 </span>

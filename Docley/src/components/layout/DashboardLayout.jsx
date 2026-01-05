@@ -382,14 +382,8 @@ export function DashboardLayout() {
                                 </div>
                                 <div className="hidden lg:block text-left min-w-0">
                                     <p className={cn(
-                                        "text-sm font-medium truncate",
-                                        isDark ? "text-white" : "text-slate-900"
-                                    )}>
-                                        {getUserDisplayName()}
-                                    </p>
-                                    <p className={cn(
-                                        "text-xs truncate",
-                                        isDark ? "text-slate-400" : "text-slate-500"
+                                        "text-sm truncate",
+                                        isDark ? "text-slate-300" : "text-slate-600"
                                     )}>
                                         {user?.email}
                                     </p>
@@ -426,14 +420,8 @@ export function DashboardLayout() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className={cn(
-                                                        "text-sm font-semibold truncate",
-                                                        isDark ? "text-white" : "text-slate-900"
-                                                    )}>
-                                                        {profile?.full_name || user?.user_metadata?.full_name || getUserDisplayName()}
-                                                    </p>
-                                                    <p className={cn(
-                                                        "text-xs truncate",
-                                                        isDark ? "text-slate-400" : "text-slate-500"
+                                                        "text-sm truncate",
+                                                        isDark ? "text-slate-300" : "text-slate-600"
                                                     )}>
                                                         {user?.email}
                                                     </p>
@@ -513,14 +501,8 @@ export function DashboardLayout() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className={cn(
-                                                    "text-sm font-semibold truncate",
-                                                    isDark ? "text-white" : "text-slate-900"
-                                                )}>
-                                                    {user?.user_metadata?.full_name || getUserDisplayName()}
-                                                </p>
-                                                <p className={cn(
-                                                    "text-xs truncate",
-                                                    isDark ? "text-slate-400" : "text-slate-500"
+                                                    "text-sm truncate",
+                                                    isDark ? "text-slate-300" : "text-slate-600"
                                                 )}>
                                                     {user?.email}
                                                 </p>
