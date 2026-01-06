@@ -256,7 +256,7 @@ export default function DashboardHome() {
                             </div>
                             <div className="flex-1" />
                             <div className="flex items-center gap-3">
-                                <Button 
+                                <Button
                                     size="lg"
                                     onClick={() => setShowTemplateSelectionModal(true)}
                                     className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-none shadow-lg shadow-orange-500/25 px-8 rounded-xl h-12"
@@ -531,6 +531,8 @@ export default function DashboardHome() {
                                     </p>
                                 </div>
                             </Link>
+
+                            {/* Quick Action removed */}
                         </div>
                     </CardContent>
                 </Card>

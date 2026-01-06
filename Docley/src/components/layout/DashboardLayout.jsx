@@ -420,8 +420,14 @@ export function DashboardLayout() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className={cn(
-                                                        "text-sm truncate",
-                                                        isDark ? "text-slate-300" : "text-slate-600"
+                                                        "text-sm font-semibold truncate",
+                                                        isDark ? "text-white" : "text-slate-900"
+                                                    )}>
+                                                        {profile?.full_name || user?.user_metadata?.full_name || getUserDisplayName()}
+                                                    </p>
+                                                    <p className={cn(
+                                                        "text-xs truncate",
+                                                        isDark ? "text-slate-400" : "text-slate-500"
                                                     )}>
                                                         {user?.email}
                                                     </p>

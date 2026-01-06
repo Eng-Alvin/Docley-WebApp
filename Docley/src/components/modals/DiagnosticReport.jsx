@@ -118,6 +118,8 @@ export function DiagnosticReport({ isOpen, onClose, documentText }) {
                                 ))}
                             </div>
 
+                            {/* Inspiration Link Removed */}
+
                             {/* Actionable Feedback */}
                             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                 <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/30 border-b border-slate-100 font-semibold text-slate-900 flex items-center gap-2">
