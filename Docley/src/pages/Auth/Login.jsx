@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../../components/ui/Card';
-import { Sparkles, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -89,8 +89,8 @@ export default function Login() {
             <div className="w-full max-w-md relative z-10">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-2 mb-4 group">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-blue-500 shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
-                            <Sparkles className="h-5 w-5 text-white" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
+                            <img src="/docley-logo.png" alt="Docley" className="h-full w-full object-contain" />
                         </div>
                     </Link>
                     <h2 className={cn(
@@ -109,16 +109,16 @@ export default function Login() {
 
                 <Card className={cn(
                     "shadow-xl backdrop-blur-sm border",
-                    isDark 
-                        ? "bg-white/5 border-white/10 shadow-black/20" 
+                    isDark
+                        ? "bg-white/5 border-white/10 shadow-black/20"
                         : "border-slate-200 bg-white/80 shadow-slate-200/50"
                 )}>
                     <CardContent className="pt-6">
                         {error && (
                             <div className={cn(
                                 "mb-4 p-3 border text-sm rounded-lg",
-                                isDark 
-                                    ? "bg-red-500/20 border-red-500/30 text-red-400" 
+                                isDark
+                                    ? "bg-red-500/20 border-red-500/30 text-red-400"
                                     : "bg-red-50 border-red-200 text-red-700"
                             )}>
                                 {error}
@@ -192,10 +192,10 @@ export default function Login() {
                                 </div>
                             </div>
 
-                            <Button 
-                                type="submit" 
-                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25" 
-                                disabled={isLoading} 
+                            <Button
+                                type="submit"
+                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25"
+                                disabled={isLoading}
                                 isLoading={isLoading}
                             >
                                 Sign In
@@ -235,8 +235,8 @@ export default function Login() {
                     </CardContent>
                     <CardFooter className={cn(
                         "justify-center border-t py-4",
-                        isDark 
-                            ? "border-white/10 bg-white/5" 
+                        isDark
+                            ? "border-white/10 bg-white/5"
                             : "border-slate-100 bg-slate-50/50"
                     )}>
                         <p className={cn(

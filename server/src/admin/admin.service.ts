@@ -114,4 +114,54 @@ export class AdminService {
 
         return activity;
     }
+
+    async getSettings() {
+        const { data, error } = await this.supabase
+            .from('global_settings')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch settings: ${error.message}`);
+        }
+        return data;
+    }
+
+    async updateSettings(settings: any) {
+        const { data, error } = await this.supabase
+            .from('global_settings')
+            .update(settings)
+            .eq('id', 1)
+            .select()
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to update settings: ${error.message}`);
+        }
+        return data;
+    }
+
+    async uploadBlogImage(file: Express.Multer.File) {
+        const fileExt = file.originalname.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await this.supabase.storage
+            .from('blog-images')
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false,
+            });
+
+        if (uploadError) {
+            throw new Error(`Failed to upload blog image: ${uploadError.message}`);
+        }
+
+        const { data } = this.supabase.storage
+            .from('blog-images')
+            .getPublicUrl(filePath);
+
+        return { publicUrl: data.publicUrl };
+    }
 }

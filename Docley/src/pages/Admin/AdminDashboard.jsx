@@ -25,47 +25,60 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { getAdminUsers, getDashboardStats, updateUserStatus, getAdminActivity } from '../../services/adminService';
-import { supabase } from '../../lib/supabase';
+import { getAdminUsers, getDashboardStats, updateUserStatus, getAdminActivity, getGlobalSettings, updateGlobalSettings } from '../../services/adminService';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';;
 
-// Mock data for charts
+// Mock data for sparklines and charts
 const mockSparkline = [
-    { v: 40 }, { v: 55 }, { v: 48 }, { v: 62 }, { v: 58 }, { v: 70 }, { v: 85 },
+    { v: 40 }, { v: 30 }, { v: 45 }, { v: 50 }, { v: 45 }, { v: 60 }, { v: 55 }, { v: 70 }, { v: 65 }, { v: 80 }
 ];
 
 const mockEvents = [
-    { id: 1, type: 'success', message: 'New user signed up', time: '2 min ago' },
-    { id: 2, type: 'warning', message: 'High plagiarism detected in Doc #402', time: '8 min ago' },
-    { id: 3, type: 'error', message: 'Payment failed for user', time: '15 min ago' },
-    { id: 4, type: 'success', message: 'Pro subscription activated', time: '22 min ago' },
+    { id: 1, type: 'success', message: 'System backup completed successfully', time: '2 mins ago' },
+    { id: 2, type: 'info', message: 'New user registered: sarah.j@example.com', time: '15 mins ago' },
+    { id: 3, type: 'warning', message: 'High CPU usage detected on AI processing node', time: '1 hour ago' },
+    { id: 4, type: 'error', message: 'Failed login attempt from unauthorized IP', time: '2 hours ago' },
 ];
 
 export default function AdminDashboard() {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
-    const [stats, setStats] = useState({ users: 0, documents: 0, aiTokens: 0 }); // aiTokens default
+    const [stats, setStats] = useState({ users: 0, documents: 0, aiTokens: 0 });
     const [users, setUsers] = useState([]);
-    const [activityFeed, setActivityFeed] = useState([]); // New state
+    const [activityFeed, setActivityFeed] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [actionLoading, setActionLoading] = useState(null);
     const [error, setError] = useState(null);
     const [chartsReady, setChartsReady] = useState(false);
+    const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+    // Derived state for filtered users
+    const filteredUsers = users.filter((user) => {
+        if (!searchQuery) return true;
+        const searchLower = searchQuery.toLowerCase();
+        return (
+            user.email?.toLowerCase().includes(searchLower) ||
+            user.id?.toLowerCase().includes(searchLower) ||
+            user.user_metadata?.full_name?.toLowerCase().includes(searchLower)
+        );
+    });
 
     const loadData = useCallback(async () => {
         try {
-            const [statsData, usersData, activityData] = await Promise.all([
+            const [statsData, usersData, activityData, settingsData] = await Promise.all([
                 getDashboardStats(),
                 getAdminUsers(),
-                getAdminActivity()
+                getAdminActivity(),
+                getGlobalSettings()
             ]);
             setStats(statsData);
             setUsers(usersData);
             setActivityFeed(activityData || []);
+            setMaintenanceMode(settingsData?.maintenance_active || false);
             setError(null);
         } catch (err) {
             console.error('Failed to load dashboard data:', err);
@@ -80,28 +93,7 @@ export default function AdminDashboard() {
         loadData();
     }, [loadData]);
 
-    // Real-time subscription for Admin
-    useEffect(() => {
-        const channel = supabase
-            .channel('admin_dashboard')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'documents' },
-                () => loadData()
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'users' },
-                () => loadData()
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [loadData]);
-
-    // Delay chart rendering until client is mounted to avoid SSR/hydration chart issues
+    // Delay chart rendering
     useEffect(() => {
         setChartsReady(true);
     }, []);
@@ -125,35 +117,17 @@ export default function AdminDashboard() {
         }
     };
 
-    const filteredUsers = users.filter((u) =>
-        (u.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()),
-    );
-
-    const [maintenanceMode, setMaintenanceMode] = useState(false);
-
-    // Initial load for maintenance status
-    useEffect(() => {
-        const fetchMaintenance = async () => {
-            const { data } = await supabase.from('global_settings').select('maintenance_active').single();
-            if (data) setMaintenanceMode(data.maintenance_active);
-        };
-        fetchMaintenance();
-    }, []);
-
     const toggleMaintenance = async () => {
         const newValue = !maintenanceMode;
+        const previousValue = maintenanceMode;
         setMaintenanceMode(newValue); // Optimistic UI
 
         try {
-            const { error } = await supabase
-                .from('global_settings')
-                .update({ maintenance_active: newValue })
-                .eq('id', 1);
-
-            if (error) throw error;
+            await updateGlobalSettings({ maintenance_active: newValue });
         } catch (err) {
             console.error('Failed to toggle maintenance:', err);
-            setMaintenanceMode(!newValue); // Revert
+            setMaintenanceMode(previousValue); // Revert
+            setError('Failed to update system settings');
         }
     };
 

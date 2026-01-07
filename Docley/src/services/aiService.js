@@ -1,19 +1,6 @@
-import { supabase } from '../lib/supabase';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../api/client';
 
 const API_URL = `${API_BASE_URL}/ai/transform`;
-
-// Helper to get authorization header
-const getAuthHeaders = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('User not authenticated');
-    }
-    return {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-    };
-};
 
 /**
  * Generic function to call the AI endpoint.
@@ -39,14 +26,10 @@ export const transformDocument = async (text, instruction, mode = 'upgrade') => 
 
         const data = await response.json();
 
-        // If mode is upgrade/transform, we return the result string.
-        // If mode is diagnostic, we return the whole object, but the caller might expect just the result?
-        // Let's keep the legacy return style for transform/upgrade.
         if (mode === 'upgrade' || mode === 'transform') {
             return data.result;
         }
 
-        // For diagnostic, return the full object
         return data;
 
     } catch (error) {
@@ -68,6 +51,5 @@ export const upgradeDocument = async (text) => {
  * Returns scores and insights.
  */
 export const analyzeDocument = async (text) => {
-    // Re-uses transformDocument but with diagnostic mode and no instruction (service handles prompt)
     return transformDocument(text, '', 'diagnostic');
 };

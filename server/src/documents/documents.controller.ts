@@ -8,14 +8,16 @@ import {
     Body,
     Query,
     UseGuards,
-    Req
+    Req,
+    UseInterceptors,
+    UploadedFile,
+    BadRequestException
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
-import { SupabaseGuard } from '../supabase/supabase.guard';
 import { UsageGuard } from '../users/guards/usage.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('documents')
-@UseGuards(SupabaseGuard)
 export class DocumentsController {
     constructor(
         private readonly documentsService: DocumentsService,
@@ -23,21 +25,34 @@ export class DocumentsController {
 
     @Post()
     @UseGuards(UsageGuard)
-    async create(@Req() req, @Body() body: any) {
-        const doc = await this.documentsService.create(req.user.id, body);
+    async create(@Req() req, @Body() createDocumentDto: any) {
+        const doc = await this.documentsService.create(req.user.id, createDocumentDto);
         return doc;
+    }
+
+    @Post('upload')
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadFile(
+        @UploadedFile() file: Express.Multer.File,
+        @Body('documentId') documentId: string,
+        @Req() req: any,
+    ) {
+        if (!file) {
+            throw new BadRequestException('No file uploaded');
+        }
+        return this.documentsService.uploadFile(req.user.id, documentId, file);
     }
 
     @Get()
     async findAll(
         @Req() req,
-        @Query('status') status?: string,
-        @Query('academic_level') academicLevel?: string,
+        @Query() query: any,
     ) {
-        return this.documentsService.findAll(req.user.id, {
-            status,
-            academic_level: academicLevel,
-        });
+        const filters = {
+            status: query.status,
+            academic_level: query.academic_level,
+        };
+        return this.documentsService.findAll(req.user.id, filters);
     }
 
     @Get(':id')
@@ -54,6 +69,4 @@ export class DocumentsController {
     async remove(@Req() req, @Param('id') id: string) {
         return this.documentsService.remove(id, req.user.id);
     }
-
-
 }

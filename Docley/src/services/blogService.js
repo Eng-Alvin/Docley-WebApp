@@ -3,7 +3,7 @@
  * No authentication required - for visitors to read published posts
  */
 
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../api/client';
 
 /**
  * Fetch all published blog posts
@@ -54,7 +54,6 @@ export async function getPostBySlug(slug) {
  */
 export async function getPostById(id) {
     try {
-        // First get all posts and find by ID
         const posts = await getPublishedPosts();
         return posts.find(p => p.id === id) || null;
     } catch (error) {

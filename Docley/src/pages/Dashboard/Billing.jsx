@@ -7,41 +7,19 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL } from '../../api/client';
 import BillingUpgradeModal from '../../components/modals/BillingUpgradeModal';
 
 export default function Billing() {
-    const { user, profile } = useAuth();
+    const { user, isPremium, refreshProfile } = useAuth();
     const { addToast } = useToast();
     const [searchParams] = useSearchParams();
-    const [isPremium, setIsPremium] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false); // No longer needed for specific fetch
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [showCheckout, setShowCheckout] = useState(false);
     const [sessionId, setSessionId] = useState(null);
 
     const status = searchParams.get('status');
-
-    // Fetch user's premium status
-    useEffect(() => {
-        const fetchPremiumStatus = async () => {
-            if (!user) return;
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('is_premium')
-                    .eq('id', user.id)
-                    .single();
-                if (error) throw error;
-                setIsPremium(data?.is_premium || false);
-            } catch (err) {
-                console.error('Failed to fetch premium status:', err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchPremiumStatus();
-    }, [user]);
 
     // Show success notification if redirected back after payment
     useEffect(() => {
@@ -53,6 +31,10 @@ export default function Billing() {
     }, [status, addToast]);
 
     const handleUpgradeClick = async () => {
+        if (!API_BASE_URL) {
+            addToast('Configuration Error: API_BASE_URL is missing.', 'error');
+            return;
+        }
         setIsCreatingSession(true);
         try {
             const response = await fetch(`${API_BASE_URL}/payments/create-session`, {

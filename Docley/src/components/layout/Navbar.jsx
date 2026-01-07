@@ -24,8 +24,8 @@ export function Navbar() {
     return (
         <nav className={cn(
             "sticky top-0 z-50 w-full border-b backdrop-blur-xl transition-colors duration-300",
-            isDark 
-                ? "border-white/10 bg-slate-950/80" 
+            isDark
+                ? "border-white/10 bg-slate-950/80"
                 : "border-blue-100/50 bg-white/80 shadow-sm"
         )}>
             <div className="container mx-auto px-4 md:px-6">
@@ -91,8 +91,8 @@ export function Navbar() {
             {isMenuOpen && (
                 <div className={cn(
                     "md:hidden border-t backdrop-blur-xl px-4 py-6 shadow-2xl animate-in slide-in-from-top-2",
-                    isDark 
-                        ? "border-white/10 bg-slate-950/95" 
+                    isDark
+                        ? "border-white/10 bg-slate-950/95"
                         : "border-blue-100 bg-white/95"
                 )}>
                     <div className="flex flex-col space-y-4">
@@ -114,8 +114,8 @@ export function Navbar() {
                             <Link to="/login" onClick={() => setIsMenuOpen(false)}>
                                 <Button variant="outline" className={cn(
                                     "w-full justify-center",
-                                    isDark 
-                                        ? "bg-white/5 border-white/20 text-white hover:bg-white/10" 
+                                    isDark
+                                        ? "bg-white/5 border-white/20 text-white hover:bg-white/10"
                                         : "bg-white border-blue-200 text-slate-700 hover:bg-blue-50"
                                 )}>Log in</Button>
                             </Link>

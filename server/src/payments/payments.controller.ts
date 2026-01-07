@@ -1,15 +1,14 @@
-import { Controller, Post, Req, UseGuards } from '@nestjs/common';
-import { SupabaseGuard } from '../supabase/supabase.guard';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Controller('payments')
-@UseGuards(SupabaseGuard)
 export class PaymentsController {
     constructor(private readonly paymentsService: PaymentsService) { }
 
-    @Post('create-session')
-    async createSession(@Req() req: any) {
-        const userId: string | undefined = req.user?.id;
-        return this.paymentsService.createSession(userId);
+    @Get('session')
+    @UseGuards(SubscriptionGuard)
+    async getSession(@Req() req: any) {
+        return this.paymentsService.getSessionId(req.user.id);
     }
 }

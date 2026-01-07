@@ -52,52 +52,52 @@ function LoadingFallback() {
 // Maintenance Guard Component
 function MaintenanceGuard({ children }) {
   // 1. All hooks at the VERY top
-  const { isInitializing, isAdmin } = useAuth();
+  const { isInitializing, isAdmin, serverError } = useAuth();
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [connectivityError, setConnectivityError] = useState(false);
 
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        const { data, error } = await supabase.from('global_settings')
-          .select('maintenance_active')
-          .eq('id', 1)
-          .maybeSingle();
-
-        if (error) {
-          console.warn('Maintenance check failed:', error.message);
-        } else if (data) {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/maintenance`);
+        if (response.ok) {
+          const data = await response.json();
           setIsMaintenance(data.maintenance_active);
+          setConnectivityError(false);
+        } else {
+          // If 401 or 500, show connectivity error
+          if (response.status === 401 || response.status >= 500) {
+            setConnectivityError(true);
+          }
         }
       } catch (err) {
         console.error('Error checking maintenance mode:', err);
+        setConnectivityError(true);
       } finally {
         setIsSettingsLoading(false);
       }
     };
     checkMaintenance();
 
-    const channel = supabase
-      .channel('maintenance_mode')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'global_settings', filter: 'id=eq.1' },
-        (payload) => {
-          setIsMaintenance(payload.new.maintenance_active);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Re-check every 5 minutes if not in real-time
+    const interval = setInterval(checkMaintenance, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // 2. No early returns before the hooks above
 
   // Show a simple skeleton while initializing (covers both auth and settings)
   if (isInitializing || isSettingsLoading) {
+    if (serverError || connectivityError) {
+      return <ServerUnreachableOverlay />;
+    }
     return <InitializingSkeleton />;
+  }
+
+  // Final catch for connectivity error even after initialization
+  if (connectivityError && !isAdmin) {
+    return <ServerUnreachableOverlay />;
   }
 
   // If maintenance is on and user is not admin, show maintenance page
@@ -117,6 +117,29 @@ function InitializingSkeleton() {
           <div className="h-full bg-indigo-500 animate-[progress_2s_ease-in-out_infinite]" style={{ width: '40%' }}></div>
         </div>
         <p className="text-center text-slate-400 text-xs font-medium uppercase tracking-widest">Docley is Preparing...</p>
+      </div>
+    </div>
+  );
+}
+
+// Server Unreachable Overlay
+function ServerUnreachableOverlay() {
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border-2 border-orange-500 max-w-md text-center">
+        <div className="bg-orange-100 dark:bg-orange-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Loader2 className="h-8 w-8 text-orange-600 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 font-display">Server Unreachable</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+          We're having trouble connecting to the Docley engine. This usually happens during a quick update or if your connection is unstable.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-sm font-bold shadow-lg transform transition-all active:scale-[0.98] hover:scale-[1.02]"
+        >
+          Check Connectivity
+        </button>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../api/client';
 
 const AuthContext = createContext({});
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children }) {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [profileLoading, setProfileLoading] = useState(false);
+    const [serverError, setServerError] = useState(false);
 
     // Refs for safety
     const lastFetchedId = useRef(null);
@@ -36,92 +38,110 @@ export function AuthProvider({ children }) {
         }
 
         try {
-            console.log(`[Auth] Fetching profile: ${userId}`);
+            console.log(`[Auth] Fetching profile via API: ${userId}`);
             setProfileLoading(true);
+            setServerError(false); // Reset error on retry
             lastFetchedId.current = userId;
 
-            // 2s Safety Timeout
+            // 10s Safety Timeout
             if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
             fetchTimeoutRef.current = setTimeout(() => {
-                if (loading) {
-                    console.warn('[Auth] Safety timeout reached. Breaking loading loop.');
+                if (loading || profileLoading) {
+                    console.warn('[Auth] Safety timeout reached. Server likely unreachable.');
                     setLoading(false);
+                    setProfileLoading(false);
+                    setServerError(true); // Signal server unreachable
                 }
-            }, 2000);
+            }, 10000);
 
             // 1. Check Cache
             const cached = sessionStorage.getItem(`profile_${userId}`);
             if (cached) {
                 const parsed = JSON.parse(cached);
-                if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'role')) {
+                if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'is_premium')) {
                     setProfile(parsed);
                     setProfileLoading(false);
                     setLoading(false);
+                    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
                     return parsed;
                 }
             }
 
-            // 2. Fetch from DB
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .maybeSingle();
+            // 2. Fetch from Backend API
+            const session = await supabase.auth.getSession();
+            const token = session.data.session?.access_token;
 
-            if (error) throw error;
+            if (!token) throw new Error('No authentication token found');
+
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Profile fetch failed: ${response.statusText}`);
+            }
+
+            const data = await response.json();
 
             if (data) {
                 setProfile(data);
                 sessionStorage.setItem(`profile_${userId}`, JSON.stringify(data));
+                if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
                 return data;
             }
             return null;
         } catch (error) {
             console.error('[Auth] Profile error:', error);
+            setLoading(false);
+            setProfileLoading(false);
+            // Don't set serverError here yet, let the timeout handle true unreachability
             return null;
         } finally {
             setProfileLoading(false);
             setLoading(false); // CRITICAL: Stop the spinner no matter what
-            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         }
-    }, [profile, loading]);
+    }, [profile, loading, profileLoading]);
+    // fetchProfile itself doesn't depend on profile or loading anymore, as it sets them.
 
     useEffect(() => {
-        // Initial session check
+        // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
-            const currentUser = session?.user ?? null;
             setSession(session);
-            setUser(currentUser);
-
-            if (currentUser) {
-                fetchProfile(currentUser.id);
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchProfile(session.user.id, session.access_token);
             } else {
                 setLoading(false);
             }
         }).catch(err => {
             console.error('[Auth] Initial session error:', err);
             setLoading(false);
+            setProfileLoading(false);
         });
 
-        // Event listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                const currentUser = session?.user ?? null;
-                setSession(session);
-                setUser(currentUser);
-
-                if (currentUser) {
-                    fetchProfile(currentUser.id);
-                } else {
-                    setProfile(null);
-                    lastFetchedId.current = null;
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            setSession(session);
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchProfile(session.user.id, session.access_token).catch(() => {
                     setLoading(false);
-                }
+                    setProfileLoading(false);
+                });
+            } else {
+                setProfile(null);
+                lastFetchedId.current = null; // Reset ref if user logs out
+                setLoading(false);
+                setProfileLoading(false);
             }
-        );
+        });
 
-        return () => subscription.unsubscribe();
-    }, [fetchProfile]);
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [fetchProfile]); // fetchProfile is a dependency because it's defined outside and used inside.
 
     // 2. Computed values using useMemo
     const isAdmin = useMemo(() => {
@@ -231,6 +251,7 @@ export function AuthProvider({ children }) {
         profile,
         loading,
         profileLoading,
+        serverError,
         isInitializing: loading, // Backwards compatibility for components using this
         isAuthenticated: !!user,
         isAdmin,

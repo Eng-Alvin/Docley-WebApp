@@ -1,53 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
+import React from 'react';
+import { X, AlertTriangle, Loader2 } from 'lucide-react';
 import { WhopCheckoutEmbed } from '@whop/checkout/react';
 import { cn } from '../../lib/utils';
+import { API_BASE_URL, getAuthHeaders } from '../../api/client';
 
+/**
+ * BillingUpgradeModal - Thin UI Component
+ * Strictly for rendering the Whop Checkout.
+ */
 export default function BillingUpgradeModal({ isOpen, onClose }) {
-    // Fail-Fast: Throw error if VITE_API_URL is missing
-    if (!import.meta.env.VITE_API_URL) {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const [sessionId, setSessionId] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+
+    React.useEffect(() => {
+        if (!isOpen || !apiUrl) return;
+
+        const fetchSession = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`${API_BASE_URL}/payments/session`, { headers });
+
+                if (!response.ok) {
+                    throw new Error('Failed to initialize checkout session');
+                }
+
+                const data = await response.json();
+                setSessionId(data.sessionId);
+            } catch (err) {
+                console.error('[Billing] Session error:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSession();
+    }, [isOpen, apiUrl]);
+
+    if (!isOpen) return null;
+
+    // Critical Config Error Overlay
+    if (!apiUrl) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-white dark:bg-slate-900 border-2 border-red-500 rounded-2xl p-8 max-w-md text-center">
-                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Configuration Error</h2>
-                    <p className="text-slate-600 dark:text-slate-400 mb-6">
-                        Frontend is misconfigured. <code>VITE_API_URL</code> is missing. Please contact support.
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-300 shadow-[inset_0_0_100px_rgba(239,68,68,0.2)]">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border-2 border-red-500 max-w-md text-center transform scale-100 animate-in zoom-in-95 duration-300">
+                    <div className="bg-red-100 dark:bg-red-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertTriangle className="h-10 w-10 text-red-600 dark:text-red-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-display">Critical Config Error</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                        The system environment variable <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-red-500 font-mono text-sm">VITE_API_URL</code> is missing.
+                        Application synchronization is disabled.
                     </p>
-                    <button onClick={onClose} className="bg-red-500 text-white px-6 py-2 rounded-lg font-medium">Close</button>
+                    <button
+                        onClick={onClose}
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-red-600/20 transform transition-all active:scale-[0.98] hover:scale-[1.02]"
+                    >
+                        Close Portal
+                    </button>
                 </div>
             </div>
         );
     }
 
-    const [hasTimedOut, setHasTimedOut] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const planId = import.meta.env.VITE_WHOP_PLAN_ID || "plan_EMmS2ygOVrIdN";
-
-    useEffect(() => {
-        if (!isOpen) {
-            setHasTimedOut(false);
-            setIsLoading(true);
-            return;
-        }
-
-        // Fail-Safe: 5-second timer
-        const timer = setTimeout(() => {
-            setHasTimedOut(true);
-            setIsLoading(false);
-        }, 5000);
-
-        return () => clearTimeout(timer);
-    }, [isOpen]);
-
-    if (!isOpen) return null;
-
-    const handleCheckoutReady = () => {
-        setIsLoading(false);
-        // If it loads, clear timeout is handled by useEffect cleanup if unmounted,
-        // but we should ideally let the user see the embed even if it takes 6s if it eventually works.
-        // However, the requirement is "If it fails to load after 5 seconds... replace the embed".
-    };
+    // Static plan ID as per instructions
+    const planId = "plan_EMmS2ygOVrIdN";
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -56,7 +77,7 @@ export default function BillingUpgradeModal({ isOpen, onClose }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
                             <span className="text-xl">🚀</span>
@@ -74,50 +95,44 @@ export default function BillingUpgradeModal({ isOpen, onClose }) {
                     </button>
                 </div>
 
-                {/* Content Area */}
+                {/* Content Area - Whop Embed */}
                 <div className="bg-white dark:bg-slate-950 min-h-[600px] flex flex-col items-center justify-center relative">
-
-                    {isLoading && !hasTimedOut && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white dark:bg-slate-950">
-                            <Loader2 className="h-10 w-10 text-indigo-600 animate-spin mb-4" />
-                            <p className="text-slate-500 dark:text-slate-400 font-medium">Securing checkout session...</p>
+                    {loading ? (
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
+                            <p className="text-sm text-slate-500 font-medium">Initializing secure connection...</p>
                         </div>
-                    )}
-
-                    {hasTimedOut ? (
-                        <div className="flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-6">
-                                <AlertCircle className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+                    ) : error ? (
+                        <div className="p-8 text-center">
+                            <div className="bg-red-100 dark:bg-red-900/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Checkout Taking a While?</h3>
-                            <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                                Browser security policies or network filters might be blocking the embedded checkout.
-                                You can continue securely on our primary payment gateway.
-                            </p>
-                            <a
-                                href={`https://whop.com/checkout/${planId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-indigo-600/20 transform hover:-translate-y-1 transition-all"
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Checkout Error</h4>
+                            <p className="text-sm text-slate-500 mb-6">{error}</p>
+                            <button
+                                onClick={onClose}
+                                className="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold"
                             >
-                                Open Secure Checkout <ExternalLink className="h-5 w-5" />
-                            </a>
-                            <p className="mt-6 text-sm text-slate-500 dark:text-slate-500">
-                                Rest assured, your payment is processed securely by Whop.
-                            </p>
+                                Try Again Later
+                            </button>
                         </div>
-                    ) : (
-                        <div className="w-full h-[600px] overflow-hidden" allow="payment; clipboard-write">
+                    ) : sessionId ? (
+                        <div className="w-full h-[600px] overflow-hidden">
                             <WhopCheckoutEmbed
-                                planId={planId}
+                                sessionId={sessionId}
+                                iframeAttributes={{
+                                    allow: 'payment; clipboard-write'
+                                }}
                             />
                         </div>
+                    ) : (
+                        <div className="text-slate-400">Unable to load checkout portal</div>
                     )}
                 </div>
 
-                {/* Footer info/Trust badges */}
+                {/* Footer */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 text-center">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                         Secure checkout powered by <b>Whop</b>
                     </p>
                 </div>

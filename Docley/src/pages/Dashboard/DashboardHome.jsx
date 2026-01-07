@@ -32,11 +32,10 @@ import { getDocuments } from '../../services/documentsService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
-import { supabase } from '../../lib/supabase';
 import { TemplateSelectionModal } from '../../components/modals/TemplateSelectionModal.jsx';
 
 export default function DashboardHome() {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [showContentModal, setShowContentModal] = useState(false);
@@ -52,33 +51,9 @@ export default function DashboardHome() {
         recentActivity: []
     });
 
-
-
-    // ... inside component
-    // Load recent documents and setup real-time subscription
+    // Load recent documents
     useEffect(() => {
         loadDocuments();
-
-        // Real-time subscription
-        const channel = supabase
-            .channel('dashboard_updates')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'documents'
-                },
-                (payload) => {
-                    console.log('Real-time update:', payload);
-                    loadDocuments();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
     }, []);
 
     const loadDocuments = async () => {
@@ -161,6 +136,9 @@ export default function DashboardHome() {
 
     // Get user's display name
     const getUserDisplayName = () => {
+        if (profile?.full_name) {
+            return profile.full_name.split(' ')[0]; // First name only
+        }
         if (user?.user_metadata?.full_name) {
             return user.user_metadata.full_name.split(' ')[0]; // First name only
         }
@@ -256,7 +234,7 @@ export default function DashboardHome() {
                             </div>
                             <div className="flex-1" />
                             <div className="flex items-center gap-3">
-                                <Button 
+                                <Button
                                     size="lg"
                                     onClick={() => setShowTemplateSelectionModal(true)}
                                     className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-none shadow-lg shadow-orange-500/25 px-8 rounded-xl h-12"
@@ -531,6 +509,8 @@ export default function DashboardHome() {
                                     </p>
                                 </div>
                             </Link>
+
+                            {/* Quick Action removed */}
                         </div>
                     </CardContent>
                 </Card>

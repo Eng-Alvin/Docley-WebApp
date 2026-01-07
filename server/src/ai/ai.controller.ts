@@ -1,11 +1,9 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AiService } from './ai.service';
-import { SupabaseGuard } from '../supabase/supabase.guard';
 import { UsageGuard } from '../users/guards/usage.guard';
 
 @Controller('ai')
-@UseGuards(SupabaseGuard)
 export class AiController {
     constructor(private readonly aiService: AiService) { }
 

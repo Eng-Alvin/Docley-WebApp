@@ -1,11 +1,11 @@
-import { Controller, Get, Patch, Delete, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Param, UseGuards, Req, Logger } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { SupabaseGuard } from '../supabase/supabase.guard';
 import { AdminGuard } from '../admin/admin.guard';
 
 @Controller('notifications')
-@UseGuards(SupabaseGuard, AdminGuard)
+@UseGuards(AdminGuard)
 export class NotificationsController {
+    private readonly logger = new Logger(NotificationsController.name);
     constructor(private readonly notificationsService: NotificationsService) { }
 
     @Get()
@@ -30,6 +30,7 @@ export class NotificationsController {
 
     @Delete(':id')
     async delete(@Param('id') id: string) {
+        this.logger.log(`Deleting notification ${id}`);
         return this.notificationsService.delete(id);
     }
 }

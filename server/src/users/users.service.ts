@@ -1,23 +1,32 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PaymentsService } from '../payments/payments.service';
+import { UserProfileDto, UpdateUserProfileDto } from './dto/user-profile.dto';
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly supabaseService: SupabaseService) { }
+    constructor(
+        private readonly supabaseService: SupabaseService,
+        @Inject(forwardRef(() => PaymentsService))
+        private readonly paymentsService: PaymentsService,
+    ) { }
 
     private get client() {
         return this.supabaseService.getClient();
     }
 
     private async getUserFlags(userId: string): Promise<{ is_premium: boolean; role: string | null }> {
+        // High-performance: Check Whop cache first
+        const isPremium = await this.paymentsService.checkSubscription(userId);
+
         const { data } = await this.client
             .from('users')
-            .select('is_premium, role')
+            .select('role')
             .eq('id', userId)
             .maybeSingle();
 
         return {
-            is_premium: data?.is_premium === true,
+            is_premium: isPremium,
             role: typeof data?.role === 'string' ? data.role : null,
         };
     }
@@ -125,17 +134,56 @@ export class UsersService {
     /**
      * Update user password using Supabase Admin Auth
      */
-    async updatePassword(userId: string, newPassword: string) {
-        const { data, error } = await this.client.auth.admin.updateUserById(
-            userId,
-            { password: newPassword }
-        );
+    async updatePassword(userId: string, data: any) {
+        const { error } = await this.client.auth.admin.updateUserById(userId, {
+            password: data.password
+        });
 
         if (error) {
-            throw new InternalServerErrorException(`Failed to update password: ${error.message}`);
+            throw new InternalServerErrorException(error.message);
+        }
+        return { message: 'Password updated successfully' };
+    }
+
+    async getProfile(userId: string): Promise<UserProfileDto> {
+        const { data, error } = await this.client
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            throw new InternalServerErrorException(error.message);
         }
 
-        return data;
+        const flags = await this.getUserFlags(userId);
+
+        return {
+            ...data,
+            is_premium: flags.is_premium,
+            role: flags.role,
+        };
+    }
+
+    async updateProfile(userId: string, updates: UpdateUserProfileDto): Promise<UserProfileDto> {
+        const { data, error } = await this.client
+            .from('users')
+            .update(updates)
+            .eq('id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+
+        const flags = await this.getUserFlags(userId);
+
+        return {
+            ...data,
+            is_premium: flags.is_premium,
+            role: flags.role,
+        };
     }
 
     /**

@@ -1,35 +1,50 @@
-import { supabase } from '../lib/supabase';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../api/client';
 
 const API_URL = `${API_BASE_URL}/users`;
 
-// Helper to get authorization header
-const getAuthHeaders = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('User not authenticated');
-    }
-    return {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-    };
-};
-
-/**
- * Update user password
- */
-export const updatePassword = async (newPassword) => {
+export async function getUserUsage() {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/password`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ password: newPassword }),
-    });
+    const response = await fetch(`${API_URL}/usage`, { headers });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update password');
+        throw new Error('Failed to fetch user usage');
     }
 
     return await response.json();
-};
+}
+
+/**
+ * Manages user profile fetching and syncing
+ */
+export async function fetchUserProfile() {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_URL}/profile`, { headers });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+    }
+
+    return await response.json();
+}
+
+/**
+ * Syncs user profile with backend
+ */
+export async function syncUserProfile() {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/sync`, {
+            method: 'POST',
+            headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to sync user profile');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error syncing user profile:', error);
+        return null;
+    }
+}

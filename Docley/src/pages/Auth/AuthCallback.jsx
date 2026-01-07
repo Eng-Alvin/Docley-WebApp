@@ -34,7 +34,7 @@ export default function AuthCallback() {
 
                         // Sync user profile (creates usage record)
                         try {
-                            const { syncUserProfile } = await import('../../services/userService');
+                            const { syncUserProfile } = await import('../../services/usersService');
                             await syncUserProfile();
                         } catch (e) {
                             console.error('Sync failed', e);
@@ -56,7 +56,7 @@ export default function AuthCallback() {
                         if (session) {
                             // Sync user profile (creates usage record)
                             try {
-                                const { syncUserProfile } = await import('../../services/userService');
+                                const { syncUserProfile } = await import('../../services/usersService');
                                 await syncUserProfile();
                             } catch (e) {
                                 console.error('Sync failed', e);
@@ -85,7 +85,7 @@ export default function AuthCallback() {
                         // Sync user profile with backend
                         try {
                             // Dynamically import to avoid circular dependencies if any (safe practice)
-                            const { syncUserProfile } = await import('../../services/userService');
+                            const { syncUserProfile } = await import('../../services/usersService');
                             await syncUserProfile();
                         } catch (e) {
                             console.error('Sync failed', e);

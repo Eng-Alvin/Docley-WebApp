@@ -44,11 +44,13 @@ ${exception.stack || 'No stack trace available'}
             this.logger.warn(`[${status}] ${request.method} ${request.url} - ${JSON.stringify(message)}`);
         }
 
-        response.status(status).json({
+        const responseBody = {
             statusCode: status,
             timestamp: new Date().toISOString(),
             path: request.url,
             ...(typeof message === 'object' ? message : { message }),
-        });
+        };
+
+        response.status(status).json(responseBody);
     }
 }

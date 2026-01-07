@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../api/client';
 
 const API_URL = API_BASE_URL;
 
@@ -15,19 +15,18 @@ const getAuthHeaders = async () => {
     };
 };
 
-// Check if current user is admin
+// Check if current user is admin via NestJS Backend
 export async function checkIsAdmin() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (error) return false;
-    return data?.role === 'admin';
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/users/check-admin`, { headers });
+        if (!response.ok) return false;
+        const { isAdmin } = await response.json();
+        return isAdmin;
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+    }
 }
 
 // Get Dashboard Stats from NestJS Backend
@@ -238,34 +237,59 @@ export async function deleteBlogPost(id) {
 }
 
 
-// Upload Image to Supabase Storage
+// Upload Image to Supabase Storage via NestJS Backend Proxy
 export async function uploadBlogImage(file) {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
+        const headers = await getAuthHeaders();
+        // Remove Content-Type to let fetch set it with boundary for FormData
+        delete headers['Content-Type'];
 
-        // 1. Generate unique path
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const formData = new FormData();
+        formData.append('file', file);
 
-        // 2. Upload to 'blog-images' bucket
-        const { error: uploadError } = await supabase.storage
-            .from('blog-images')
-            .upload(filePath, file);
+        const response = await fetch(`${API_URL}/admin/upload-image`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
 
-        if (uploadError) {
-            throw uploadError;
+        if (!response.ok) {
+            throw new Error('Failed to upload image');
         }
 
-        // 3. Get Public URL
-        const { data } = supabase.storage
-            .from('blog-images')
-            .getPublicUrl(filePath);
-
-        return data.publicUrl;
+        const { publicUrl } = await response.json();
+        return publicUrl;
     } catch (error) {
         console.error('Error uploading image:', error);
+        throw error;
+    }
+}
+// --- System Settings via NestJS API ---
+
+export async function getGlobalSettings() {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/admin/settings`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch settings');
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching settings:', error);
+        return { maintenance_active: false };
+    }
+}
+
+export async function updateGlobalSettings(settings) {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/admin/settings`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(settings),
+        });
+        if (!response.ok) throw new Error('Failed to update settings');
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating settings:', error);
         throw error;
     }
 }

@@ -11,11 +11,12 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
+import { API_BASE_URL } from '../../api/client';
 import BillingUpgradeModal from '../../components/modals/BillingUpgradeModal';
 
 export default function DashboardSettings() {
     const { addToast } = useToast();
-    const { user, signOut } = useAuth();
+    const { user, profile, signOut, refreshProfile } = useAuth();
     const { theme, setTheme } = useTheme();
     const [activeTab, setActiveTab] = useState('general');
     const [isSaving, setIsSaving] = useState(false);
@@ -40,47 +41,41 @@ export default function DashboardSettings() {
     const [showPasswords, setShowPasswords] = useState(false);
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-    // Populate data
+    // Populate data from Auth Context Profile
     useEffect(() => {
-        if (user) {
+        if (profile) {
             setFormData(prev => ({
                 ...prev,
-                email: user.email,
-                fullName: user.user_metadata?.full_name || '',
+                fullName: profile.full_name || '',
+                email: profile.email || user?.email || '',
             }));
-
-            const fetchProfile = async () => {
-                const { data } = await supabase
-                    .from('users')
-                    .select('full_name, email')
-                    .eq('id', user.id)
-                    .single();
-                if (data) {
-                    setFormData(prev => ({
-                        ...prev,
-                        fullName: data.full_name || user.user_metadata?.full_name,
-                        email: data.email || user.email
-                    }));
-                }
-            };
-            fetchProfile();
         }
-    }, [user]);
+    }, [profile, user]);
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ full_name: formData.fullName })
-                .eq('id', user.id);
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ full_name: formData.fullName })
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save settings');
+            }
 
+            // Sync with Supabase Auth metadata for consistency
             await supabase.auth.updateUser({
                 data: { full_name: formData.fullName }
             });
 
+            await refreshProfile();
             addToast('Settings saved successfully!', 'success');
         } catch (error) {
             addToast('Failed to save settings: ' + error.message, 'error');
@@ -102,10 +97,21 @@ export default function DashboardSettings() {
 
         setIsUpdatingPassword(true);
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: passwordData.newPassword
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${API_BASE_URL}/users/password`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ password: passwordData.newPassword })
             });
-            if (error) throw error;
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update password');
+            }
+
             addToast('Password updated successfully', 'success');
             setPasswordData({ newPassword: '', confirmPassword: '' });
         } catch (error) {

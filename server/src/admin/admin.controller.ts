@@ -1,6 +1,7 @@
-import { Controller, Get, Patch, Delete, Param, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Param, Body, UseGuards, BadRequestException, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('admin')
 @UseGuards(AdminGuard) // Secured with AdminGuard - requires role: 'admin'
@@ -33,5 +34,24 @@ export class AdminController {
     @Delete('users/:id')
     async deleteUser(@Param('id') id: string) {
         return this.adminService.deleteUser(id);
+    }
+
+    @Get('settings')
+    async getSettings() {
+        return this.adminService.getSettings();
+    }
+
+    @Patch('settings')
+    async updateSettings(@Body() settings: any) {
+        return this.adminService.updateSettings(settings);
+    }
+
+    @Post('upload-image')
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadImage(@UploadedFile() file: Express.Multer.File) {
+        if (!file) {
+            throw new BadRequestException('No file uploaded');
+        }
+        return this.adminService.uploadBlogImage(file);
     }
 }

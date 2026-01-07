@@ -1,42 +1,51 @@
-import { Module } from '@nestjs/common';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { Module, ValidationPipe } from '@nestjs/common';
+import { APP_GUARD, APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AiModule } from './ai/ai.module';
-import { UsersModule } from './users/users.module';
-import { DocumentsModule } from './documents/documents.module';
 import { SupabaseModule } from './supabase/supabase.module';
-import { AdminModule } from './admin/admin.module';
+import { UsersModule } from './users/users.module';
+import { PaymentsModule } from './payments/payments.module';
+import { AiModule } from './ai/ai.module';
+import { DocumentsModule } from './documents/documents.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { PostsModule } from './posts/posts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
-import { PaymentsModule } from './payments/payments.module';
+import { AdminModule } from './admin/admin.module';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 @Module({
   imports: [
-    // Rate limiting configuration
-    ThrottlerModule.forRoot([{
-      ttl: 60000, // 1 minute in milliseconds
-      limit: 30,  // 60 requests per minute globally
-    }]),
-    AiModule,
-    UsersModule,
-    DocumentsModule,
     SupabaseModule,
-    AdminModule,
+    UsersModule,
+    PaymentsModule,
+    AiModule,
+    DocumentsModule,
+    FeedbackModule,
     PostsModule,
     NotificationsModule,
     WebhooksModule,
-    PaymentsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Apply throttler globally
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: SubscriptionGuard,
     },
   ],
 })

@@ -1,113 +1,92 @@
-import { supabase } from '../lib/supabase';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../api/client';
 
 const API_URL = `${API_BASE_URL}/notifications`;
 
-/**
- * Notifications Service
- * Handles all notification operations via the NestJS Backend
- */
-
-// Helper to get authorization header
-const getAuthHeaders = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('User not authenticated');
-    }
-    return {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-    };
-};
-
-/**
- * Get all notifications
- */
 export async function getNotifications() {
-    const headers = await getAuthHeaders();
-    const response = await fetch(API_URL, {
-        method: 'GET',
-        headers
-    });
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(API_URL, { headers });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch notifications');
+        if (!response.ok) {
+            throw new Error('Failed to fetch notifications');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
     }
-
-    return await response.json();
 }
 
-/**
- * Get unread notification count
- */
-export async function getUnreadCount() {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/unread-count`, {
-        method: 'GET',
-        headers
-    });
+export async function markAsRead(id) {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/${id}/read`, {
+            method: 'PATCH',
+            headers,
+        });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to get unread count');
+        if (!response.ok) {
+            throw new Error('Failed to mark notification as read');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        throw error;
     }
-
-    const data = await response.json();
-    return data.count || 0;
 }
 
-/**
- * Mark notification as read
- */
-export async function markAsRead(notificationId) {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/${notificationId}/read`, {
-        method: 'PATCH',
-        headers
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to mark notification as read');
-    }
-
-    return await response.json();
-}
-
-/**
- * Mark all notifications as read
- */
 export async function markAllAsRead() {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/read-all`, {
-        method: 'PATCH',
-        headers
-    });
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/read-all`, {
+            method: 'PATCH',
+            headers,
+        });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to mark all as read');
+        if (!response.ok) {
+            throw new Error('Failed to mark all as read');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        throw error;
     }
+}
+export async function deleteNotification(id) {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE',
+            headers,
+        });
 
-    return await response.json();
+        if (!response.ok) {
+            throw new Error('Failed to delete notification');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+        throw error;
+    }
 }
 
-/**
- * Delete notification
- */
-export async function deleteNotification(notificationId) {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/${notificationId}`, {
-        method: 'DELETE',
-        headers
-    });
+export async function getUnreadCount() {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/unread-count`, { headers });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete notification');
+        if (!response.ok) {
+            throw new Error('Failed to fetch unread count');
+        }
+
+        const data = await response.json();
+        return data.count;
+    } catch (error) {
+        console.error('Error fetching unread count:', error);
+        return 0;
     }
-
-    return { success: true };
 }
-

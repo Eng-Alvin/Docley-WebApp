@@ -1,5 +1,4 @@
-import { supabase } from '../lib/supabase';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../api/client';
 
 const API_URL = `${API_BASE_URL}/documents`;
 
@@ -8,48 +7,32 @@ const API_URL = `${API_BASE_URL}/documents`;
  * Handles all CRUD operations for documents via the NestJS Backend
  */
 
-// Helper to get authorization header
-const getAuthHeaders = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('User not authenticated');
-    }
-    return {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-    };
-};
-
 export async function uploadDocumentFile(file, documentId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        throw new Error('User not authenticated');
+    const headers = await getAuthHeaders();
+    delete headers['Content-Type'];
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentId', documentId);
+
+    const response = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload document');
     }
 
-    const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
-    const safeExt = fileExt ? `.${fileExt}` : '';
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2)}${safeExt}`;
-    const filePath = `${user.id}/${documentId}/${uniqueName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, {
-            contentType: file.type,
-            upsert: false,
-        });
-
-    if (uploadError) {
-        throw uploadError;
-    }
-
+    const { filePath } = await response.json();
     return filePath;
 }
 
-// Create a new document
 export async function createDocument(documentData) {
     const headers = await getAuthHeaders();
 
-    // Construct payload matching the backend expectation
     const payload = {
         title: documentData.title,
         content: documentData.content || '',
@@ -77,11 +60,9 @@ export async function createDocument(documentData) {
     return await response.json();
 }
 
-// Get all documents for the current user with optional filtering
 export async function getDocuments(filters = {}) {
     const headers = await getAuthHeaders();
 
-    // Construct query parameters
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
     if (filters.academicLevel) params.append('academic_level', filters.academicLevel);
@@ -101,7 +82,6 @@ export async function getDocuments(filters = {}) {
     return await response.json();
 }
 
-// Get a single document by ID
 export async function getDocument(id) {
     const headers = await getAuthHeaders();
 
@@ -121,7 +101,6 @@ export async function getDocument(id) {
     return await response.json();
 }
 
-// Update a document
 export async function updateDocument(id, updates) {
     const headers = await getAuthHeaders();
 
@@ -154,12 +133,10 @@ export async function updateDocument(id, updates) {
     return await response.json();
 }
 
-// Soft delete a document
 export async function deleteDocument(id) {
     return updateDocument(id, { deleted_at: new Date().toISOString() });
 }
 
-// Permanently delete a document
 export async function permanentlyDeleteDocument(id) {
     const headers = await getAuthHeaders();
 
@@ -176,15 +153,11 @@ export async function permanentlyDeleteDocument(id) {
     return true;
 }
 
-// Auto-save document content (debounced in component)
 export async function autoSaveDocument(id, content, contentHtml) {
     return updateDocument(id, { content, contentHtml });
 }
 
-// Get document count for user
 export async function getDocumentCount() {
     const docs = await getDocuments();
     return docs.length;
 }
-
-
