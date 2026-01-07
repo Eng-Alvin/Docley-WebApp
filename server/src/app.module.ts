@@ -11,6 +11,7 @@ import { AdminModule } from './admin/admin.module';
 import { PostsModule } from './posts/posts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PostsModule,
     NotificationsModule,
     WebhooksModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

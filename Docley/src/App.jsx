@@ -8,6 +8,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import DashboardDocuments from './pages/Dashboard/DashboardDocuments';
 import DashboardSettings from './pages/Dashboard/DashboardSettings';
+import Billing from './pages/Dashboard/Billing';
 const TimetableGenerator = lazy(() => import('./pages/Dashboard/TimetableGenerator/TimetableGenerator'));
 import EditorPage from './pages/Editor/EditorPage';
 import Login from './pages/Auth/Login';
@@ -180,6 +181,7 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="settings" element={<DashboardSettings />} />
+                  <Route path="settings/billing" element={<Billing />} />
                 </Route>
 
                 {/* Admin Routes - Lazy loaded, restricted to admin email only */}

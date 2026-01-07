@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
+import BillingUpgradeModal from '../../components/modals/BillingUpgradeModal';
 
 export default function DashboardSettings() {
     const { addToast } = useToast();
@@ -18,6 +19,7 @@ export default function DashboardSettings() {
     const { theme, setTheme } = useTheme();
     const [activeTab, setActiveTab] = useState('general');
     const [isSaving, setIsSaving] = useState(false);
+    const [showBillingModal, setShowBillingModal] = useState(false);
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -376,7 +378,10 @@ export default function DashboardSettings() {
 
                                     <div className="mt-8 pt-8 border-t border-indigo-100 dark:border-indigo-900/30">
                                         <div className="flex flex-col sm:flex-row gap-4">
-                                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">
+                                            <Button
+                                                onClick={() => setShowBillingModal(true)}
+                                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20"
+                                            >
                                                 Upgrade to Pro
                                             </Button>
                                             <Button
@@ -550,18 +555,13 @@ export default function DashboardSettings() {
                                 <div className={cn(
                                     "p-2 rounded-lg transition-colors",
                                     isActive
-                                        ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-                                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+                                        ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
+                                        : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
                                 )}>
                                     <Icon className="h-5 w-5" />
                                 </div>
-                                <div className="flex-1">
-                                    <div className={cn(
-                                        "font-medium text-sm transition-colors",
-                                        isActive ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
-                                    )}>
-                                        {tab.label}
-                                    </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-slate-900 dark:text-white">{tab.label}</div>
                                     <div className="text-xs text-slate-500 dark:text-slate-500 line-clamp-1">
                                         {tab.desc}
                                     </div>
@@ -589,6 +589,9 @@ export default function DashboardSettings() {
                     {renderContent()}
                 </div>
             </div>
+
+            {/* Billing Modal */}
+            <BillingUpgradeModal isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />
         </div>
     );
 }

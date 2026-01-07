@@ -68,6 +68,9 @@ export class WhopWebhookController {
         this.logger.log(`Received Whop event: ${eventType}`);
 
         switch (eventType) {
+            case 'payment.succeeded':
+                await this.whopWebhookService.handlePaymentSucceeded(payload);
+                break;
             case 'membership.went_active':
             case 'membership.activated':
             case 'membership_activated':
