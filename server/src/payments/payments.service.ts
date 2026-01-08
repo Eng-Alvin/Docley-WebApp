@@ -14,7 +14,7 @@ export class PaymentsService {
     constructor() {
         const apiKey = process.env.WHOP_API_KEY || process.env.WHOP_PAYMENT_API_KEY;
         if (!apiKey) {
-            throw new Error('WHOP_API_KEY or WHOP_PAYMENT_API_KEY is missing in server environment variables');
+            throw new Error('CRITICAL CONFIG ERROR: WHOP_API_KEY or WHOP_PAYMENT_API_KEY is missing. Payments feature will not function. Please add it to your server .env file.');
         }
         this.whop = new Whop({ apiKey });
     }
@@ -47,7 +47,7 @@ export class PaymentsService {
      * Creates a checkout session for the user and returns the sessionId.
      * This fulfills the 'Thin Client' requirement by keeping plan logic in the backend.
      */
-    async getSessionId(userId: string): Promise<{ sessionId: string }> {
+    async getSessionId(userId: string): Promise<{ sessionId: string, url: string }> {
         if (!userId) {
             throw new UnauthorizedException('User not authenticated');
         }
@@ -60,9 +60,14 @@ export class PaymentsService {
                 metadata: {
                     user_id: userId,
                 },
+                redirect_url: 'https://docley.vercel.app/settings/billing?status=success'
             });
 
-            return { sessionId: id };
+            const checkoutUrl = `https://whop.com/checkout/${id}`;
+            return {
+                sessionId: id,
+                url: checkoutUrl
+            };
         } catch (error) {
             this.logger.error(`Failed to create Whop session for user ${userId}:`, error.message);
             throw new InternalServerErrorException('Could not generate checkout session');

@@ -7,7 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import { API_BASE_URL } from '../../api/client';
+import apiClient from '../../api/client';
 import BillingUpgradeModal from '../../components/modals/BillingUpgradeModal';
 
 export default function Billing() {
@@ -31,25 +31,14 @@ export default function Billing() {
     }, [status, addToast]);
 
     const handleUpgradeClick = async () => {
-        if (!API_BASE_URL) {
-            addToast('Configuration Error: API_BASE_URL is missing.', 'error');
-            return;
-        }
         setIsCreatingSession(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/payments/create-session`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`,
-                },
-            });
-            if (!response.ok) throw new Error('Failed to create checkout session');
-            const { sessionId, purchase_url } = await response.json();
+            const response = await apiClient.post('/payments/create-session');
+            const { sessionId } = response.data;
             setSessionId(sessionId);
             setShowCheckout(true);
         } catch (err) {
-            addToast('Failed to start checkout: ' + err.message, 'error');
+            addToast('Failed to start checkout: ' + (err.response?.data?.message || err.message), 'error');
         } finally {
             setIsCreatingSession(false);
         }

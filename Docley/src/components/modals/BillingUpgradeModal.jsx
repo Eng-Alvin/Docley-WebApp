@@ -1,139 +1,112 @@
 import React from 'react';
-import { X, AlertTriangle, Loader2 } from 'lucide-react';
-import { WhopCheckoutEmbed } from '@whop/checkout/react';
+import { X, AlertTriangle, Loader2, Rocket, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { API_BASE_URL, getAuthHeaders } from '../../api/client';
+import { createCheckoutSession } from '../../services/paymentsService';
+import { Button } from '../ui/Button';
 
-/**
- * BillingUpgradeModal - Thin UI Component
- * Strictly for rendering the Whop Checkout.
- */
 export default function BillingUpgradeModal({ isOpen, onClose }) {
-    const apiUrl = import.meta.env.VITE_API_URL;
-    const [sessionId, setSessionId] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
+    const [isRedirecting, setIsRedirecting] = React.useState(false);
     const [error, setError] = React.useState(null);
 
-    React.useEffect(() => {
-        if (!isOpen || !apiUrl) return;
-
-        const fetchSession = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const headers = await getAuthHeaders();
-                const response = await fetch(`${API_BASE_URL}/payments/session`, { headers });
-
-                if (!response.ok) {
-                    throw new Error('Failed to initialize checkout session');
-                }
-
-                const data = await response.json();
-                setSessionId(data.sessionId);
-            } catch (err) {
-                console.error('[Billing] Session error:', err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
+    const handleUpgrade = async () => {
+        setIsRedirecting(true);
+        setError(null);
+        try {
+            const data = await createCheckoutSession();
+            if (data.url) {
+                // Redirect to Whop secure checkout
+                window.location.href = data.url;
+            } else {
+                throw new Error('Checkout URL not received from server');
             }
-        };
-
-        fetchSession();
-    }, [isOpen, apiUrl]);
+        } catch (err) {
+            console.error('[BillingUpgradeModal] Redirect failed:', err);
+            setError(err.message || 'Failed to initialize secure checkout');
+            setIsRedirecting(false);
+        }
+    };
 
     if (!isOpen) return null;
-
-    // Critical Config Error Overlay
-    if (!apiUrl) {
-        return (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-300 shadow-[inset_0_0_100px_rgba(239,68,68,0.2)]">
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border-2 border-red-500 max-w-md text-center transform scale-100 animate-in zoom-in-95 duration-300">
-                    <div className="bg-red-100 dark:bg-red-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertTriangle className="h-10 w-10 text-red-600 dark:text-red-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-display">Critical Config Error</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                        The system environment variable <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-red-500 font-mono text-sm">VITE_API_URL</code> is missing.
-                        Application synchronization is disabled.
-                    </p>
-                    <button
-                        onClick={onClose}
-                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-red-600/20 transform transition-all active:scale-[0.98] hover:scale-[1.02]"
-                    >
-                        Close Portal
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // Static plan ID as per instructions
-    const planId = "plan_EMmS2ygOVrIdN";
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div
-                className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300"
+                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                            <span className="text-xl">🚀</span>
+                        <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                            <Rocket className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Upgrade to Pro</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Unlock unlimited document processing</p>
+                            <h3 className="text-xl font-bold">Upgrade to Pro</h3>
+                            <p className="text-xs text-indigo-100 italic">Elevate your document game</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
+                        className="p-2 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all"
                     >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                {/* Content Area - Whop Embed */}
-                <div className="bg-white dark:bg-slate-950 min-h-[600px] flex flex-col items-center justify-center relative">
-                    {loading ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
-                            <p className="text-sm text-slate-500 font-medium">Initializing secure connection...</p>
+                {/* Content */}
+                <div className="p-8 space-y-6">
+                    {error && (
+                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex items-start gap-3 text-red-600 dark:text-red-400">
+                            <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm font-medium">{error}</p>
                         </div>
-                    ) : error ? (
-                        <div className="p-8 text-center">
-                            <div className="bg-red-100 dark:bg-red-900/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Checkout Error</h4>
-                            <p className="text-sm text-slate-500 mb-6">{error}</p>
-                            <button
-                                onClick={onClose}
-                                className="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold"
-                            >
-                                Try Again Later
-                            </button>
-                        </div>
-                    ) : sessionId ? (
-                        <div className="w-full h-[600px] overflow-hidden">
-                            <WhopCheckoutEmbed
-                                sessionId={sessionId}
-                                iframeAttributes={{
-                                    allow: 'payment; clipboard-write'
-                                }}
-                            />
-                        </div>
-                    ) : (
-                        <div className="text-slate-400">Unable to load checkout portal</div>
                     )}
-                </div>
 
-                {/* Footer */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 text-center">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Secure checkout powered by <b>Whop</b>
+                    <div className="space-y-4">
+                        <h4 className="font-bold text-slate-900 dark:text-white text-lg">Pro Plan Benefits</h4>
+                        <ul className="space-y-3">
+                            {[
+                                'Unlimited document processing',
+                                'Priority AI processing speeds',
+                                'Early access to new features',
+                                'Premium export options',
+                                'Priority support'
+                            ].map((feature, idx) => (
+                                <li key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Monthly Billing</p>
+                            <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">$9.00<span className="text-sm font-normal text-slate-400">/mo</span></p>
+                        </div>
+                        <div className="text-right">
+                            <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold tracking-wider uppercase">Best Value</span>
+                        </div>
+                    </div>
+
+                    <Button
+                        onClick={handleUpgrade}
+                        disabled={isRedirecting}
+                        className="w-full py-6 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 rounded-2xl transition-all active:scale-[0.98]"
+                    >
+                        {isRedirecting ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Processing...
+                            </>
+                        ) : (
+                            'Upgrade Now'
+                        )}
+                    </Button>
+
+                    <p className="text-[10px] text-center text-slate-400">
+                        By upgrading, you agree to our Terms of Service. Secure payments processed via Whop.
                     </p>
                 </div>
             </div>
