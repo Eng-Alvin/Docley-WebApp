@@ -7,25 +7,25 @@ import { PostsService } from './posts.service';
  */
 @Controller('posts')
 export class PublicPostsController {
-    constructor(private readonly postsService: PostsService) { }
+  constructor(private readonly postsService: PostsService) {}
 
-    /**
-     * GET /posts - Returns all published posts for public viewing
-     */
-    @Get()
-    async findAllPublished() {
-        return this.postsService.findPublished();
-    }
+  /**
+   * GET /posts - Returns all published posts for public viewing
+   */
+  @Get()
+  async findAllPublished() {
+    return this.postsService.findPublished();
+  }
 
-    /**
-     * GET /posts/:slug - Returns a single published post by slug
-     */
-    @Get(':slug')
-    async findBySlug(@Param('slug') slug: string) {
-        const post = await this.postsService.findBySlug(slug);
-        if (!post) {
-            throw new NotFoundException('Post not found');
-        }
-        return post;
+  /**
+   * GET /posts/:slug - Returns a single published post by slug
+   */
+  @Get(':slug')
+  async findBySlug(@Param('slug') slug: string) {
+    const post = await this.postsService.findBySlug(slug);
+    if (!post) {
+      throw new NotFoundException('Post not found');
     }
+    return post;
+  }
 }

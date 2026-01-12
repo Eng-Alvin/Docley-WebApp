@@ -4,8 +4,8 @@ import { WhopWebhookService } from './whop/whop-webhook.service';
 import { SupabaseModule } from '../../core/supabase/supabase.module';
 
 @Module({
-    imports: [SupabaseModule],
-    controllers: [WhopWebhookController],
-    providers: [WhopWebhookService],
+  imports: [SupabaseModule],
+  controllers: [WhopWebhookController],
+  providers: [WhopWebhookService],
 })
-export class WebhooksModule { }
+export class WebhooksModule {}

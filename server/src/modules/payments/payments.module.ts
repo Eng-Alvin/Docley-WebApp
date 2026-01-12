@@ -5,9 +5,9 @@ import { SupabaseModule } from '../../core/supabase/supabase.module';
 import { WebhooksController } from './webhooks.controller';
 
 @Module({
-    imports: [SupabaseModule], // Import SupabaseModule if needed for auth constraints, though Guard usually needs it globally or imported
-    controllers: [PaymentsController, WebhooksController],
-    providers: [PaymentsService],
-    exports: [PaymentsService],
+  imports: [SupabaseModule], // Import SupabaseModule if needed for auth constraints, though Guard usually needs it globally or imported
+  controllers: [PaymentsController, WebhooksController],
+  providers: [PaymentsService],
+  exports: [PaymentsService],
 })
-export class PaymentsModule { }
+export class PaymentsModule {}

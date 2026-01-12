@@ -4,8 +4,8 @@ import { FeedbackService } from './feedback.service';
 import { SupabaseModule } from '../../core/supabase/supabase.module';
 
 @Module({
-    imports: [SupabaseModule],
-    controllers: [FeedbackController],
-    providers: [FeedbackService],
+  imports: [SupabaseModule],
+  controllers: [FeedbackController],
+  providers: [FeedbackService],
 })
-export class FeedbackModule { }
+export class FeedbackModule {}

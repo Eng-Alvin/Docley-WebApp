@@ -4,10 +4,9 @@ import { NotificationsService } from './notifications.service';
 import { SupabaseModule } from '../../core/supabase/supabase.module';
 
 @Module({
-    imports: [SupabaseModule],
-    controllers: [NotificationsController],
-    providers: [NotificationsService],
-    exports: [NotificationsService],
+  imports: [SupabaseModule],
+  controllers: [NotificationsController],
+  providers: [NotificationsService],
+  exports: [NotificationsService],
 })
-export class NotificationsModule { }
-
+export class NotificationsModule {}

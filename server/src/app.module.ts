@@ -46,4 +46,4 @@ import { PaymentsModule } from './modules/payments/payments.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

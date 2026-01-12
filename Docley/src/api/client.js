@@ -3,9 +3,9 @@ import { supabase } from '../lib/supabase';
 
 // 1. Base URL Resolution & Safety Check
 const getBaseURL = () => {
-    const url = import.meta.env.VITE_API_URL;
+    const url = import.meta.env.VITE_API_BASE_URL;
     if (!url) {
-        console.error('FATAL: VITE_API_URL is missing from .env');
+        console.error('FATAL: VITE_API_BASE_URL is missing from .env');
         return import.meta.env.DEV ? 'http://localhost:3000' : '';
     }
     return url;

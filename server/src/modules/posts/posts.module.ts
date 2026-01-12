@@ -6,9 +6,8 @@ import { SupabaseModule } from '../../core/supabase/supabase.module';
 import { AdminModule } from '../admin/admin.module';
 
 @Module({
-    imports: [SupabaseModule, AdminModule],
-    controllers: [PostsController, PublicPostsController],
-    providers: [PostsService],
+  imports: [SupabaseModule, AdminModule],
+  controllers: [PostsController, PublicPostsController],
+  providers: [PostsService],
 })
-export class PostsModule { }
-
+export class PostsModule {}

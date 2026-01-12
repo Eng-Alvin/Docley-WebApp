@@ -3,124 +3,123 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 
 @Injectable()
 export class NotificationsService {
-    constructor(private readonly supabaseService: SupabaseService) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
-    private get client() {
-        return this.supabaseService.getClient();
+  private get client() {
+    return this.supabaseService.getClient();
+  }
+
+  /**
+   * Create a notification
+   */
+  async create(notification: {
+    type: string;
+    title: string;
+    message: string;
+    metadata?: any;
+    admin_id?: string;
+  }) {
+    const { data, error } = await this.client
+      .from('notifications')
+      .insert({
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        metadata: notification.metadata || {},
+        admin_id: notification.admin_id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create notification:', error);
+      throw new Error(`Failed to create notification: ${error.message}`);
     }
 
-    /**
-     * Create a notification
-     */
-    async create(notification: {
-        type: string;
-        title: string;
-        message: string;
-        metadata?: any;
-        admin_id?: string;
-    }) {
-        const { data, error } = await this.client
-            .from('notifications')
-            .insert({
-                type: notification.type,
-                title: notification.title,
-                message: notification.message,
-                metadata: notification.metadata || {},
-                admin_id: notification.admin_id || null,
-            })
-            .select()
-            .single();
+    return data;
+  }
 
-        if (error) {
-            console.error('Failed to create notification:', error);
-            throw new Error(`Failed to create notification: ${error.message}`);
-        }
+  /**
+   * Get all notifications for admin
+   */
+  async findAll(limit: number = 50) {
+    const { data, error } = await this.client
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-        return data;
+    if (error) {
+      throw new Error(`Failed to fetch notifications: ${error.message}`);
     }
 
-    /**
-     * Get all notifications for admin
-     */
-    async findAll(limit: number = 50) {
-        const { data, error } = await this.client
-            .from('notifications')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(limit);
+    return data || [];
+  }
 
-        if (error) {
-            throw new Error(`Failed to fetch notifications: ${error.message}`);
-        }
+  /**
+   * Get unread count
+   */
+  async getUnreadCount() {
+    const { count, error } = await this.client
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('read', false);
 
-        return data || [];
+    if (error) {
+      throw new Error(`Failed to get unread count: ${error.message}`);
     }
 
-    /**
-     * Get unread count
-     */
-    async getUnreadCount() {
-        const { count, error } = await this.client
-            .from('notifications')
-            .select('*', { count: 'exact', head: true })
-            .eq('read', false);
+    return count || 0;
+  }
 
-        if (error) {
-            throw new Error(`Failed to get unread count: ${error.message}`);
-        }
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(id: string) {
+    const { data, error } = await this.client
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id)
+      .select()
+      .single();
 
-        return count || 0;
+    if (error) {
+      throw new Error(`Failed to mark notification as read: ${error.message}`);
     }
 
-    /**
-     * Mark notification as read
-     */
-    async markAsRead(id: string) {
-        const { data, error } = await this.client
-            .from('notifications')
-            .update({ read: true })
-            .eq('id', id)
-            .select()
-            .single();
+    return data;
+  }
 
-        if (error) {
-            throw new Error(`Failed to mark notification as read: ${error.message}`);
-        }
+  /**
+   * Mark all notifications as read
+   */
+  async markAllAsRead() {
+    const { data, error } = await this.client
+      .from('notifications')
+      .update({ read: true })
+      .eq('read', false)
+      .select();
 
-        return data;
+    if (error) {
+      throw new Error(`Failed to mark all as read: ${error.message}`);
     }
 
-    /**
-     * Mark all notifications as read
-     */
-    async markAllAsRead() {
-        const { data, error } = await this.client
-            .from('notifications')
-            .update({ read: true })
-            .eq('read', false)
-            .select();
+    return data;
+  }
 
-        if (error) {
-            throw new Error(`Failed to mark all as read: ${error.message}`);
-        }
+  /**
+   * Delete notification
+   */
+  async delete(id: string) {
+    const { error } = await this.client
+      .from('notifications')
+      .delete()
+      .eq('id', id);
 
-        return data;
+    if (error) {
+      throw new Error(`Failed to delete notification: ${error.message}`);
     }
 
-    /**
-     * Delete notification
-     */
-    async delete(id: string) {
-        const { error } = await this.client
-            .from('notifications')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            throw new Error(`Failed to delete notification: ${error.message}`);
-        }
-
-        return { success: true };
-    }
+    return { success: true };
+  }
 }
-

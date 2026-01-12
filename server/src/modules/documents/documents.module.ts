@@ -5,9 +5,9 @@ import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [UsersModule, NotificationsModule],
-    controllers: [DocumentsController],
-    providers: [DocumentsService],
-    exports: [DocumentsService],
+  imports: [UsersModule, NotificationsModule],
+  controllers: [DocumentsController],
+  providers: [DocumentsService],
+  exports: [DocumentsService],
 })
-export class DocumentsModule { }
+export class DocumentsModule {}
