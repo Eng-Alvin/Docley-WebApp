@@ -7,6 +7,7 @@ import {
   Req,
   BadRequestException,
   UnauthorizedException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import * as express from 'express';
@@ -17,7 +18,7 @@ import { WhopWebhookService } from './whop-webhook.service';
 export class WhopWebhookController {
   private readonly logger = new Logger(WhopWebhookController.name);
 
-  constructor(private readonly whopWebhookService: WhopWebhookService) {}
+  constructor(private readonly whopWebhookService: WhopWebhookService) { }
 
   @Post()
   async handleWebhook(
@@ -90,5 +91,3 @@ export class WhopWebhookController {
     return { received: true };
   }
 }
-
-import { InternalServerErrorException } from '@nestjs/common';
