@@ -13,6 +13,7 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { HealthModule } from './health/health.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { HealthModule } from './health/health.module';
     AdminModule,
     PaymentsModule,
     HealthModule,
+    MaintenanceModule,
   ],
   controllers: [],
   providers: [
