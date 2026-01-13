@@ -1,23 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-    }),
   ],
+  define: {
+    'process.env': {},
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      process: 'process/browser',
+      buffer: 'buffer',
+    },
+  },
   optimizeDeps: {
     exclude: ['pdfjs-dist'],
+    include: ['buffer', 'process/browser'],
   },
   worker: {
     format: 'es',
