@@ -18,16 +18,17 @@ export class SubscriptionGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private supabaseService: SupabaseService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route is marked as Public
+    // Check if route or controller is marked as Public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
     if (isPublic) {
+      this.logger.debug(`Accessing public route: ${context.getHandler().name}`);
       return true;
     }
 

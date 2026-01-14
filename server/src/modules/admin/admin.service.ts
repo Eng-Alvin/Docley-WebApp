@@ -7,7 +7,7 @@ export class AdminService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   private get supabase() {
     return this.supabaseService.getClient();
@@ -78,6 +78,7 @@ export class AdminService {
       .select('*', { count: 'exact', head: true });
 
     // 3. Global AI Token Usage (RPC)
+    // Returns SUM(tokens_used) from public.usage
     const { data: totalTokens, error: rpcError } =
       await this.supabase.rpc('get_total_tokens');
 
