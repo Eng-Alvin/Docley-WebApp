@@ -16,7 +16,7 @@ import Signup from './pages/Auth/Signup';
 import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
 import AuthCallback from './pages/Auth/AuthCallback';
-import { ToastProvider } from './context/ToastContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute, PublicRoute, AdminOnlyRoute } from './components/ProtectedRoute';
@@ -177,7 +177,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
+        <NotificationProvider>
           <FloatingDocuments />
           <PWAInstallPrompt delaySeconds={30} />
           <MaintenanceGuard>
@@ -284,7 +284,7 @@ function App() {
               </Router>
             </RedirectLoopProtector>
           </MaintenanceGuard>
-        </ToastProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

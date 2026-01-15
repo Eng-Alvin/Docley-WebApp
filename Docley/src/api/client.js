@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { supabase } from '../lib/supabase';
 
+let notificationHandler = null;
+
+export const registerNotificationHandler = (handler) => {
+    notificationHandler = handler;
+};
+
 // 1. Base URL Resolution & Safety Check
 const getBaseURL = () => {
     const url = import.meta.env.VITE_API_BASE_URL;
@@ -46,9 +52,21 @@ apiClient.interceptors.request.use(
  * Handles global error states (401, 500) and prevents zombie sessions.
  */
 apiClient.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Trigger success notification if present
+        if (response.data?.notification && notificationHandler) {
+            notificationHandler(response.data.notification);
+        }
+        return response;
+    },
     async (error) => {
         const status = error.response?.status;
+        const data = error.response?.data;
+
+        // Trigger error notification if present
+        if (data?.notification && notificationHandler) {
+            notificationHandler(data.notification);
+        }
 
         if (status === 401) {
             console.warn('[API Client] 401 Unauthorized - Clearing zombie session');

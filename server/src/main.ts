@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { NotificationInterceptor } from './common/interceptors/notification.interceptor';
 const compression = require('compression');
 
 dotenv.config();
@@ -108,6 +109,9 @@ async function bootstrap() {
 
   // Global exception filter for clear error reporting
   app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Global notification interceptor
+  app.useGlobalInterceptors(new NotificationInterceptor());
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

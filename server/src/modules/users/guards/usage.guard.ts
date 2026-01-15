@@ -2,13 +2,14 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
-  ForbiddenException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from '../users.service';
 
 @Injectable()
 export class UsageGuard implements CanActivate {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -52,11 +53,23 @@ export class UsageGuard implements CanActivate {
     } catch (e: any) {
       const message = e?.message || '';
       if (message.toLowerCase().includes('limit')) {
-        throw new ForbiddenException({
+        const response = {
+          statusCode: HttpStatus.PAYMENT_REQUIRED,
           error: 'Limit Reached',
           message:
             'You have reached your free lifetime limit. Please upgrade to Pro for unlimited access.',
-        });
+          notification: {
+            code: 'LIMIT_REACHED',
+            message: 'You have reached your free lifetime limit.',
+            priority: 'critical',
+            action: {
+              label: 'Upgrade to Pro',
+              type: 'upgrade',
+            },
+            ttl: null,
+          },
+        };
+        throw new HttpException(response, HttpStatus.PAYMENT_REQUIRED);
       }
       throw e;
     }

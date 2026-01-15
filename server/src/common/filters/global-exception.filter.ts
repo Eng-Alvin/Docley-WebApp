@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Notification } from '../interfaces/notification.interface';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -46,12 +47,17 @@ ${exception.stack || 'No stack trace available'}
       );
     }
 
-    const responseBody = {
+    const responseBody: any = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       ...(typeof message === 'object' ? message : { message }),
     };
+
+    // Extract notification if it exists in the message object
+    if (typeof message === 'object' && (message as any).notification) {
+      responseBody.notification = (message as any).notification;
+    }
 
     response.status(status).json(responseBody);
   }
