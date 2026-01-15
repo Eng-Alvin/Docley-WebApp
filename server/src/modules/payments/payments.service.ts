@@ -18,29 +18,23 @@ export class PaymentsService {
     // Sanity log for Render/Environment debugging
     console.log('WHOP KEY LOADED:', !!process.env.WHOP_API_KEY);
 
-    if (!this.apiKey) {
-      this.logger.error(
-        'CRITICAL: WHOP_API_KEY is missing from environment variables',
-      );
-      throw new InternalServerErrorException(
-        'Server Payment Configuration Error: Missing API Key',
-      );
+    const apiKey = process.env.WHOP_API_KEY;
+    const planId = process.env.WHOP_PLAN_ID;
+
+    if (!apiKey) {
+      this.logger.error('CRITICAL: WHOP_API_KEY is missing from environment');
+      throw new InternalServerErrorException('Server Payment Configuration Error: Missing API Key');
     }
 
-    if (!this.priceId) {
-      this.logger.error(
-        'CRITICAL: WHOP_PRICE_ID is missing from environment variables',
-      );
-      throw new InternalServerErrorException(
-        'Server Payment Configuration Error: Missing Price ID',
-      );
+    if (!planId) {
+      this.logger.error('CRITICAL: WHOP_PLAN_ID is missing from environment');
+      throw new InternalServerErrorException('Server Payment Configuration Error: Missing Plan ID');
     }
 
     try {
-      // Updated to v2 API as requested
       const requestUrl = 'https://api.whop.com/api/v2/checkout_sessions';
       const requestBody = {
-        plan_id: this.priceId, // Whop v2 standard expects 'plan_id' for checkout sessions. 
+        plan_id: planId,
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
@@ -48,61 +42,51 @@ export class PaymentsService {
         },
       };
 
-      this.logger.log(`Initiating Whop Checkout v2 for User ID: ${userId}`);
-      this.logger.log(`Target URL: ${requestUrl}`);
+      this.logger.log(`Initiating Whop Checkout v2 | User: ${userId}`);
+      this.logger.debug(`Request Body: ${JSON.stringify(requestBody)}`);
 
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.WHOP_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          Accept: 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(requestBody),
       });
 
+      const responseBody = await response.text();
+      let data: any;
+
+      try {
+        data = JSON.parse(responseBody);
+      } catch (e) {
+        this.logger.error(`Failed to parse Whop response: ${responseBody}`);
+        throw new InternalServerErrorException('Invalid JSON response from Whop');
+      }
+
       if (!response.ok) {
-        let errorBody = 'Could not parse error body';
-        try {
-          errorBody = await response.text();
-        } catch (e) {
-          this.logger.warn('Failed to read response body on error');
-        }
-
-        this.logger.error(
-          `Whop API Request Failed! Status: ${response.status} ${response.statusText}`,
-        );
-        this.logger.error(`Error Body: ${errorBody}`);
-        this.logger.error(`Request Body Sent: ${JSON.stringify(requestBody)}`);
-
-        throw new InternalServerErrorException(
-          `Payment Provider Error: ${response.status} ${response.statusText} - Check server logs for details`,
-        );
+        this.logger.error(`Whop API Request Failed! Status: ${response.status} | Body: ${responseBody}`);
+        throw new InternalServerErrorException(`Payment Provider Error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      // v2 response structure usually has 'url' or 'checkout_url'
-      const checkoutUrl = data.url || data.checkout_url || data.data?.url;
+      this.logger.log(`Whop Response received: ${JSON.stringify(data)}`);
 
-      if (!checkoutUrl) {
-        this.logger.error(
-          'Whop response did not contain a checkout URL. Full Response:',
-          JSON.stringify(data),
-        );
-        throw new InternalServerErrorException(
-          'Invalid response from payment provider (Missing Checkout URL)',
-        );
+      // Whop v2 returns 'redirect_url'
+      const redirectUrl = data.redirect_url;
+
+      if (!redirectUrl) {
+        this.logger.error('Whop response missing redirect_url. Full Data:', JSON.stringify(data));
+        // Use 502 Bad Gateway as requested for invalid upstream response
+        throw new InternalServerErrorException('Payment Provider Error: Missing Redirect URL (502 Bad Gateway)');
       }
 
-      return { url: checkoutUrl };
+      this.logger.log(`Checkout Session Created: ${redirectUrl}`);
+      return { redirectUrl };
     } catch (error) {
       this.logger.error(`Checkout Session Exception: ${error.message}`);
-      if (error instanceof InternalServerErrorException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        `Internal Payment System Error: ${error.message}`,
-      );
+      if (error instanceof InternalServerErrorException) throw error;
+      throw new InternalServerErrorException(`Internal Payment System Error: ${error.message}`);
     }
   }
 

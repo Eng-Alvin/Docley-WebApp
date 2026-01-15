@@ -1,33 +1,36 @@
-import { Controller, Post, UseGuards, Req, Body } from '@nestjs/common';
+import { Controller, Post, UseGuards, Req, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { SubscriptionGuard } from '../../common/guards/subscription.guard';
 
-interface AuthenticatedRequest extends Request {
-  user: {
-    sub: string;
-    id: string;
-    email?: string;
-  };
-}
-
-// User requested POST /api/payments/create-session
 @Controller('api/payments')
 @UseGuards(SubscriptionGuard)
 export class PaymentsController {
+  private readonly logger = new Logger(PaymentsController.name);
+
   constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post('create-session')
   async createCheckoutSession(
     @Req() req: any,
-    @Body() body: { redirectUrl?: string },
   ) {
     const userId = req.user?.sub || req.user?.id;
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    // Dynamic success and cancel URLs
-    const successUrl = body.redirectUrl || `${baseUrl}/dashboard?session=success`;
-    const cancelUrl = `${baseUrl}/dashboard?session=canceled`;
+    if (!userId) {
+      this.logger.error('Unauthorized checkout attempt: Missing User ID in request');
+      throw new InternalServerErrorException('Authentication Error: Missing User ID');
+    }
 
-    return this.paymentsService.createCheckoutSession(userId, successUrl, cancelUrl);
+    // Strict absolute production URLs for Whop v2
+    const successUrl = 'https://docley-xi.vercel.app/dashboard?payment=success';
+    const cancelUrl = 'https://docley-xi.vercel.app/dashboard?payment=cancel';
+
+    this.logger.log(`Creating checkout session for User: ${userId}`);
+
+    const result = await this.paymentsService.createCheckoutSession(userId, successUrl, cancelUrl);
+
+    // Standardized return contract for frontend compliance
+    return {
+      redirectUrl: result.redirectUrl
+    };
   }
 }
