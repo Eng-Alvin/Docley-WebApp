@@ -12,11 +12,11 @@ export default function BillingUpgradeModal({ isOpen, onClose }) {
     const handleUpgrade = async () => {
         setLoading(true);
         try {
-            const { url } = await paymentsService.createCheckoutSession();
-            if (url) {
-                window.location.href = url;
+            const { redirectUrl } = await paymentsService.createCheckoutSession();
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
             } else {
-                throw new Error('No checkout URL returned');
+                throw new Error('No redirect URL returned from server');
             }
         } catch (error) {
             console.error('Upgrade failed:', error);
