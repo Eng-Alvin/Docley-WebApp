@@ -17,7 +17,10 @@ export class ChatService {
   private genAI: GoogleGenerativeAI;
   private model: any;
 
-  constructor(private readonly retrievalService: RetrievalService) {
+  constructor(
+    private readonly retrievalService: RetrievalService,
+    private readonly supabaseService: SupabaseService,
+  ) {
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error(
@@ -49,13 +52,30 @@ export class ChatService {
     // mode: 'diagnostic' | 'upgrade' | 'analysis' (legacy)
     let prompt;
 
-    // RAG: If documentId is provided, fetch relevant context
+    // RAG: If documentId is provided, fetch relevant context and metadata
     let context = '';
     if (documentId) {
+      // 1. Fetch document metadata
+      const { data: doc } = await this.supabaseService.getClient()
+        .from('documents')
+        .select('title, academic_level, citation_style, document_type')
+        .eq('id', documentId)
+        .single();
+
+      if (doc) {
+        context += `--- DOCUMENT METADATA ---\n`;
+        context += `Title: ${doc.title}\n`;
+        context += `Type: ${doc.document_type}\n`;
+        context += `Academic Level: ${doc.academic_level}\n`;
+        context += `Preferred Citation Style: ${doc.citation_style}\n`;
+        context += `--- END METADATA ---\n\n`;
+      }
+
+      // 2. Fetch relevant chunks
       const query = instruction || text || 'General document analysis';
       const chunks = await this.retrievalService.getRelevantChunks(documentId, query);
       if (chunks.length > 0) {
-        context = `\n\n--- DOCUMENT CONTEXT ---\n${chunks.join('\n\n')}\n--- END CONTEXT ---\n\n`;
+        context += `--- DOCUMENT CONTEXT ---\n${chunks.join('\n\n')}\n--- END CONTEXT ---\n\n`;
       }
     }
 
@@ -69,7 +89,8 @@ export class ChatService {
       `;
     } else if (mode === 'upgrade' || mode === 'transform') {
       // Upgrade / Transform mode
-      prompt = `You are an Expert Academic Editor.
+      prompt = `ROLE & IDENTITY
+You are "Docley Architect," You act as a senior professor. Your core specialty is upgrading students document, research paper, reports and thesis to modern, highly good paper.
             
             ${context}
 
@@ -77,7 +98,7 @@ export class ChatService {
             "${text}"
             
             Instruction:
-            ${instruction || 'Improve the academic tone, clarity, and flow of this text.'}
+            ${instruction || 'Improve the academic tone, clarity, and flow of this text, with out changing the core idea of the text. Make sure your upgrade is plagarism free if it is tested using a plagarism tool.'}
             
             Return a JSON object with a single key "result" containing the improved text as valid HTML fragments.
             Example: { "result": "<p>Improved text...</p>" }

@@ -71,6 +71,7 @@ export function IntakeModal({ isOpen, onClose, onBack, initialContent = null }) 
         { value: 'MLA 9th Edition', label: 'MLA 9th' },
         { value: 'Harvard', label: 'Harvard' },
         { value: 'Chicago', label: 'Chicago' },
+        { value: 'IEEE', label: 'IEEE' },
     ];
 
     const academicLevels = [
