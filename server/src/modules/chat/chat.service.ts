@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
 import { DIAGNOSTIC_PROMPT } from './prompts/diagnostic';
 import { CITATION_PROMPT } from './prompts/citation';
+import { RetrievalService } from '../documents/retrieval.service';
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ export class ChatService {
   private genAI: GoogleGenerativeAI;
   private model: any;
 
-  constructor() {
+  constructor(private readonly retrievalService: RetrievalService) {
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error(
@@ -35,9 +36,10 @@ export class ChatService {
     text: string,
     instruction: string,
     mode: string,
+    documentId?: string,
   ): Promise<any> {
     console.log(
-      `[ChatService] Received request: Mode=${mode}, TextLength=${text?.length}`,
+      `[ChatService] Received request: Mode=${mode}, TextLength=${text?.length}, DocumentId=${documentId}`,
     );
 
     if (!text) {
@@ -47,19 +49,37 @@ export class ChatService {
     // mode: 'diagnostic' | 'upgrade' | 'analysis' (legacy)
     let prompt;
 
+    // RAG: If documentId is provided, fetch relevant context
+    let context = '';
+    if (documentId) {
+      const query = instruction || text || 'General document analysis';
+      const chunks = await this.retrievalService.getRelevantChunks(documentId, query);
+      if (chunks.length > 0) {
+        context = `\n\n--- DOCUMENT CONTEXT ---\n${chunks.join('\n\n')}\n--- END CONTEXT ---\n\n`;
+      }
+    }
+
     if (mode === 'diagnostic' || mode === 'analysis') {
-      prompt = DIAGNOSTIC_PROMPT.replace('{{TEXT}}', text);
+      prompt = `
+      ${context}
+      User Question/Instruction: ${instruction || 'Analyze this text'}
+      Current Selection: "${text}"
+      
+      ${DIAGNOSTIC_PROMPT}
+      `;
     } else if (mode === 'upgrade' || mode === 'transform') {
       // Upgrade / Transform mode
       prompt = `You are an Expert Academic Editor.
             
-            Original Text:
+            ${context}
+
+            Current Selection:
             "${text}"
             
             Instruction:
-            ${instruction || 'Improve the academic tone, clarity, and flow of this text. Keep the meaning but make it professional.'}
+            ${instruction || 'Improve the academic tone, clarity, and flow of this text.'}
             
-            Return a JSON object with a single key "result" containing the improved text as valid HTML fragments (paragraphs, bold, etc).
+            Return a JSON object with a single key "result" containing the improved text as valid HTML fragments.
             Example: { "result": "<p>Improved text...</p>" }
             `;
     } else if (mode === 'citation') {

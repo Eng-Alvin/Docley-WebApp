@@ -14,7 +14,7 @@ import {
 import { Button } from '../ui/Button';
 import apiClient from '../../api/client';
 
-export const CitationModal = ({ isOpen, onClose, onInsert, currentStyle = 'APA 7th Edition' }) => {
+export const CitationModal = ({ isOpen, onClose, onInsert, currentStyle = 'APA 7th Edition', documentId = null }) => {
     const [source, setSource] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -37,7 +37,8 @@ export const CitationModal = ({ isOpen, onClose, onInsert, currentStyle = 'APA 7
             const response = await apiClient.post('/ai/transform', {
                 text: source,
                 instruction: currentStyle,
-                mode: 'citation'
+                mode: 'citation',
+                documentId: documentId
             });
 
             setResult(response.data);

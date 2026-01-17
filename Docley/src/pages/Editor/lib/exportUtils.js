@@ -1,306 +1,135 @@
-import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
+import { jsPDF } from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Media, Header } from 'docx';
 
 /**
- * Convert oklch color to RGB hex
+ * Sanitize text for PDF (strip markdown and HTML)
  */
-function oklchToRgb(oklchString) {
-    // If it's already a hex color, return it
-    if (oklchString.startsWith('#')) {
-        return oklchString;
-    }
+function sanitizeTextForPDF(html) {
+    if (!html) return '';
 
-    // If it's rgb/rgba, return it
-    if (oklchString.startsWith('rgb')) {
-        return oklchString;
-    }
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
 
-    // Default fallback for oklch (convert to dark gray)
-    return '#1e293b';
-}
+    // Process block elements to preserve line breaks
+    let text = '';
+    const blocks = temp.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li');
 
-/**
- * Sanitize CSS to remove oklch colors and convert to RGB
- */
-function sanitizeStyles(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
-
-    // Get computed styles
-    const computed = window.getComputedStyle(element);
-    const colorProps = [
-        'color', 'background-color', 'border-color',
-        'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-        'outline-color', 'text-decoration-color', 'fill', 'stroke'
-    ];
-
-    colorProps.forEach(prop => {
-        try {
-            const value = computed.getPropertyValue(prop);
-            if (value && (value.includes('oklch') || value.includes('oklab') || value.includes('var('))) {
-                const rgbColor = oklchToRgb(value);
-                element.style.setProperty(prop, rgbColor, 'important');
-            }
-        } catch (e) {
-            // Ignore errors
-        }
-    });
-
-    // Recursively sanitize children
-    Array.from(element.children).forEach(child => sanitizeStyles(child));
-}
-
-/**
- * Deep clean HTML to remove oklch references
- */
-function deepCleanHTML(html) {
-    return html
-        // Remove oklch/oklab color functions
-        .replace(/oklch\([^)]+\)/gi, '#1e293b')
-        .replace(/oklab\([^)]+\)/gi, '#1e293b')
-        // Remove CSS variables
-        .replace(/var\(--[^)]+\)/gi, '#1e293b')
-        // Clean up rgba with alpha 0
-        .replace(/rgba?\([^)]*,\s*0\)/g, 'transparent')
-        // Remove any remaining oklch references in style attributes
-        .replace(/style="[^"]*oklch[^"]*"/gi, (match) => {
-            return match.replace(/oklch\([^)]+\)/gi, '#1e293b');
+    if (blocks.length > 0) {
+        blocks.forEach(block => {
+            text += block.innerText.trim() + '\n\n';
         });
+    } else {
+        // Fallback to plain text if no block structures found
+        text = temp.innerText;
+    }
+
+    return text
+        .replace(/\*\*/g, '') // remove bold markdown
+        .replace(/\*/g, '')  // remove italic markdown
+        .replace(/#/g, '')   // remove heading markers
+        .trim();
 }
 
 /**
- * Export the editor content to a PDF file.
+ * Export the editor content to a PDF file using manual jsPDF rendering.
  */
 export const exportToPDF = async (element, fileName = 'document.pdf', options = {}) => {
     const { margins, headerText } = options;
+
     if (!element) {
-        console.error('PDF Export Error: No element provided');
-        throw new Error('Editor element not found');
+        throw new Error('Editor content not found');
     }
 
-    console.log('Initiating PDF Export for:', fileName);
+    // 1. Resolve content - ensure we are capturing the latest state
+    // We use innerHTML to capture the structure and then sanitize
+    const contentHTML = element.innerHTML;
+    const plainText = sanitizeTextForPDF(contentHTML);
 
-    // Create a temporary container for rendering
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = '816px'; // A4 Width
-    container.style.backgroundColor = 'white';
-    container.style.padding = '0';
-    container.style.margin = '0';
+    console.log('[PDF Export] Validating content length:', plainText.length);
 
-    // Clone the editor content - use deep clone to preserve all nodes
-    const clone = element.cloneNode(true);
-
-    // Preserve the original HTML structure first
-    const originalHTML = clone.innerHTML;
-
-    // Deep sanitize styles before cleaning HTML
-    sanitizeStyles(clone);
-
-    // Clean HTML content but preserve structure
-    clone.innerHTML = deepCleanHTML(originalHTML);
-
-    // Remove problematic styles but keep content structure
-    clone.style.transform = 'none';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.boxShadow = 'none';
-    clone.style.backgroundColor = 'white';
-    clone.style.position = 'relative';
-    clone.style.display = 'block';
-    clone.style.width = '816px';
-    clone.style.minHeight = 'auto';
-
-    // Ensure ProseMirror class is preserved for styling
-    if (!clone.classList.contains('ProseMirror')) {
-        clone.classList.add('ProseMirror');
+    // 2. Validate AI content length
+    if (!plainText || plainText.length < 5) {
+        throw new Error('Cannot export empty document. Please wait for AI to finish or add some text.');
     }
-
-    container.appendChild(clone);
-    document.body.appendChild(container);
-
-    // Wait for fonts/images to load - increased timeout for images
-    const images = clone.querySelectorAll('img');
-    const imagePromises = Array.from(images).map(img => {
-        return new Promise((resolve) => {
-            if (img.complete) {
-                resolve();
-            } else {
-                img.onload = resolve;
-                img.onerror = resolve; // Continue even if image fails
-                setTimeout(resolve, 2000); // Max 2s wait per image
-            }
-        });
-    });
-    await Promise.all(imagePromises);
-    await new Promise(resolve => setTimeout(resolve, 300)); // Additional wait
-
-    const opt = {
-        margin: [0, 0, 0, 0],
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true, // Allow cross-origin images
-            logging: false,
-            width: 816,
-            height: undefined, // Auto height
-            backgroundColor: '#ffffff',
-            removeContainer: true,
-            onclone: (clonedDoc) => {
-                // Remove all stylesheets that might contain oklch
-                const styles = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
-                styles.forEach(s => s.remove());
-
-                // Inject clean essential styles
-                const essentialStyle = clonedDoc.createElement('style');
-                essentialStyle.innerHTML = `
-                    * {
-                        color-scheme: light !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    body, html {
-                        background: white !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    .ProseMirror {
-                        background: white !important;
-                        padding: ${margins ? `${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px` : '96px'} !important;
-                        width: 816px !important;
-                        box-shadow: none !important;
-                        margin: 0 !important;
-                        color: #1e293b !important;
-                        position: relative;
-                    }
-                    .custom-header {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: ${margins?.top ? `${margins.top}px` : '96px'};
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 11px;
-                        color: #64748b;
-                        pointer-events: none;
-                    }
-                    p {
-                        margin-bottom: 1em;
-                        line-height: 1.5;
-                        font-size: 12pt !important;
-                        color: #1e293b !important;
-                    }
-                    h1, h2, h3, h4, h5, h6 {
-                        color: #1e293b !important;
-                        font-weight: bold;
-                    }
-                    .page-break-container {
-                        margin: 0 -96px;
-                        width: calc(100% + 192px);
-                    }
-                    .page-gap {
-                        height: 48px;
-                        background-color: #f1f5f9;
-                        border-top: 1px solid #e2e8f0;
-                    }
-                    .page-header, .page-footer {
-                        height: 96px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        font-size: 11px;
-                        color: #64748b;
-                        font-family: sans-serif;
-                    }
-                    .page-number {
-                        font-weight: 600;
-                        color: #64748b;
-                    }
-                    img {
-                        max-width: 100% !important;
-                        height: auto !important;
-                        display: block !important;
-                        margin: 1em 0 !important;
-                    }
-                    .editor-image {
-                        max-width: 100% !important;
-                        height: auto !important;
-                    }
-                `;
-                clonedDoc.head.appendChild(essentialStyle);
-
-                // Ensure all images are loaded and converted to base64 if needed
-                const clonedImages = clonedDoc.querySelectorAll('img');
-                clonedImages.forEach(img => {
-                    // If image is base64, ensure it's properly formatted
-                    if (img.src && img.src.startsWith('data:')) {
-                        img.style.maxWidth = '100%';
-                        img.style.height = 'auto';
-                    }
-                });
-
-                // Inject custom header if provided
-                if (headerText) {
-                    const headerDiv = clonedDoc.createElement('div');
-                    headerDiv.className = 'custom-header';
-                    headerDiv.innerText = headerText;
-                    const proseMirror = clonedDoc.querySelector('.ProseMirror');
-                    if (proseMirror) {
-                        proseMirror.prepend(headerDiv);
-                    }
-                }
-
-                // Sanitize all elements in cloned document
-                const allElements = clonedDoc.querySelectorAll('*');
-                allElements.forEach(el => {
-                    sanitizeStyles(el);
-                    // Clean style attribute
-                    if (el.hasAttribute('style')) {
-                        let style = el.getAttribute('style');
-                        style = style.replace(/oklch\([^)]+\)/gi, '#1e293b');
-                        style = style.replace(/oklab\([^)]+\)/gi, '#1e293b');
-                        style = style.replace(/var\(--[^)]+\)/gi, '#1e293b');
-                        el.setAttribute('style', style);
-                    }
-                });
-            }
-        },
-        jsPDF: {
-            unit: 'px',
-            format: [816, 1123], // A4
-            orientation: 'portrait',
-            compress: true
-        },
-        pagebreak: { mode: ['css', 'legacy'] }
-    };
 
     try {
-        if (typeof html2pdf !== 'function') {
-            throw new Error('PDF library (html2pdf) not correctly loaded');
-        }
+        // 3. Initialize jsPDF
+        // Px unit is used for consistency with the editor's display
+        const doc = new jsPDF({
+            orientation: 'p',
+            unit: 'pt', // points are standard for PDFs
+            format: 'a4'
+        });
 
-        // Use the container directly, not the clone
-        const exporter = html2pdf().from(container).set(opt);
+        // 4. Set Font and Style
+        doc.setFont('helvetica', 'normal');
+        const fontSize = 12;
+        doc.setFontSize(fontSize);
 
-        // Save the PDF
-        await exporter.save();
+        // 5. Page Layout Constants
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginX = margins?.left ? (margins.left * 0.75) : 72; // constant for standard margin
+        const marginY = margins?.top ? (margins.top * 0.75) : 72;
+        const marginBottom = margins?.bottom ? (margins.bottom * 0.75) : 72;
+        const maxLineWidth = pageWidth - (marginX * 2);
 
-        console.log('PDF Export successful');
+        let cursorY = marginY;
+
+        // 6. Add Header if exists
+        const addHeader = (pageNum) => {
+            if (headerText) {
+                doc.setFontSize(9);
+                doc.setTextColor(150);
+                doc.text(headerText, pageWidth / 2, 40, { align: 'center' });
+                doc.setFontSize(fontSize);
+                doc.setTextColor(30);
+            }
+        };
+
+        // Initialize first page
+        addHeader(1);
+
+        // 7. Split content into manageable chunks (paragraphs)
+        const paragraphs = plainText.split('\n\n');
+
+        // 8. Render Paragraphs with auto-pagination
+        paragraphs.forEach((para) => {
+            if (!para.trim()) return;
+
+            // Wrap text within page width
+            const lines = doc.splitTextToSize(para, maxLineWidth);
+            const lineHeight = fontSize * 1.5;
+
+            lines.forEach((line) => {
+                // Check if we need a new page
+                if (cursorY + lineHeight > pageHeight - marginBottom) {
+                    doc.addPage();
+                    cursorY = marginY;
+                    addHeader();
+                }
+
+                doc.text(line, marginX, cursorY);
+                cursorY += lineHeight;
+            });
+
+            // Add space between paragraphs
+            cursorY += lineHeight * 0.5;
+        });
+
+        // 9. Finalize and Download
+        console.log('[PDF Export] Finalizing document stream...');
+        const finalFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+        doc.save(finalFileName);
+
+        console.log('[PDF Export] Success');
     } catch (error) {
-        console.error('PDF Export failed details:', error);
-        throw error;
-    } finally {
-        // Cleanup
-        if (document.body.contains(container)) {
-            document.body.removeChild(container);
-        }
+        console.error('[PDF Export] Critical rendering failure:', error);
+        throw new Error('PDF Generation Failed: ' + error.message);
     }
 };
+
 
 /**
  * Helper to fetch image and return as buffer/unit8array

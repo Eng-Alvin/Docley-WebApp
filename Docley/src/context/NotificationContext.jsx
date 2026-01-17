@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { BottomSheet } from '../components/ui/BottomSheet';
-import { registerNotificationHandler } from '../api/client';
+import { registerNotificationHandler, registerStatusHandler } from '../api/client';
 import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 const NotificationContext = createContext(null);
 
@@ -71,6 +72,7 @@ export const NotificationProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
     const [activeCritical, setActiveCritical] = useState(null);
     const [pendingAction, setPendingAction] = useState(null);
+    const [isWakingUp, setIsWakingUp] = useState(false);
 
     const showNotification = useCallback((notification) => {
         if (!notification) return;
@@ -94,6 +96,9 @@ export const NotificationProvider = ({ children }) => {
 
     useEffect(() => {
         registerNotificationHandler(showNotification);
+        registerStatusHandler((type, value) => {
+            if (type === 'waking_up') setIsWakingUp(value);
+        });
     }, [showNotification]);
 
     const removeToast = useCallback((id) => {
@@ -142,6 +147,18 @@ export const NotificationProvider = ({ children }) => {
                 onClose={dismissCritical}
                 onAction={triggerAction}
             />
+
+            {/* Cold Start Indicator */}
+            {isWakingUp && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10002] animate-in slide-in-from-bottom-4 fade-in duration-500">
+                    <div className="bg-slate-900/90 dark:bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 dark:border-slate-200/50">
+                        <Loader2 className="h-4 w-4 text-orange-500 animate-spin" />
+                        <span className="text-[13px] font-bold text-white dark:text-slate-900 tracking-tight">
+                            Waking up Docley engine...
+                        </span>
+                    </div>
+                </div>
+            )}
         </NotificationContext.Provider>
     );
 };

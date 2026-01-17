@@ -3,7 +3,7 @@ import { Button } from '../ui/Button';
 import { useEffect, useState } from 'react';
 import { analyzeDocument } from '../../services/aiService';
 
-export function DiagnosticReport({ isOpen, onClose, documentText }) {
+export function DiagnosticReport({ isOpen, onClose, documentText, documentId = null }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -14,7 +14,7 @@ export function DiagnosticReport({ isOpen, onClose, documentText }) {
             setError(null);
 
             // Artificial delay for better UX if response is too fast, or just real fetch
-            analyzeDocument(documentText)
+            analyzeDocument(documentText, documentId)
                 .then(result => {
                     setData(result);
                     setLoading(false);

@@ -2,9 +2,14 @@ import axios from 'axios';
 import { supabase } from '../lib/supabase';
 
 let notificationHandler = null;
+let statusHandler = null;
 
 export const registerNotificationHandler = (handler) => {
     notificationHandler = handler;
+};
+
+export const registerStatusHandler = (handler) => {
+    statusHandler = handler;
 };
 
 // 1. Base URL Resolution & Safety Check
@@ -19,7 +24,7 @@ const getBaseURL = () => {
 
 const apiClient = axios.create({
     baseURL: getBaseURL(),
-    timeout: 30000,
+    timeout: 10000, // Reduced to 10s for standard requests
     headers: {
         'Content-Type': 'application/json',
     }
@@ -33,6 +38,12 @@ apiClient.interceptors.request.use(
     async (config) => {
         // Smoke Test Indicator
         console.log('🚀 API Request:', config.method.toUpperCase(), config.url);
+
+        // Cold Start Detection: If request takes > 2s, signal "Waking up server..."
+        config.metadata = { startTime: Date.now() };
+        config.slowRequestTimeout = setTimeout(() => {
+            if (statusHandler) statusHandler('waking_up', true);
+        }, 2000);
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -53,6 +64,12 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
     (response) => {
+        // Clear cold start timeout
+        if (response.config.slowRequestTimeout) {
+            clearTimeout(response.config.slowRequestTimeout);
+        }
+        if (statusHandler) statusHandler('waking_up', false);
+
         // Trigger success notification if present
         if (response.data?.notification && notificationHandler) {
             notificationHandler(response.data.notification);
@@ -60,6 +77,12 @@ apiClient.interceptors.response.use(
         return response;
     },
     async (error) => {
+        // Clear cold start timeout
+        if (error.config?.slowRequestTimeout) {
+            clearTimeout(error.config.slowRequestTimeout);
+        }
+        if (statusHandler) statusHandler('waking_up', false);
+
         const status = error.response?.status;
         const data = error.response?.data;
 
@@ -76,6 +99,16 @@ apiClient.interceptors.response.use(
 
         if (status >= 500) {
             console.error('[API Client] Backend Error:', error.response?.data?.message || error.message);
+        }
+
+        // Handle Timeout specifically for better UX
+        if (error.code === 'ECONNABORTED' && statusHandler) {
+            notificationHandler?.({
+                code: 'TIMEOUT',
+                message: 'The server is taking too long to respond. Please try again.',
+                priority: 'normal',
+                ttl: 5000
+            });
         }
 
         return Promise.reject(error);

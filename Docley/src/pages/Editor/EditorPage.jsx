@@ -1158,7 +1158,7 @@ export default function EditorPage() {
                 return;
             }
 
-            const upgradedText = await upgradeDocument(currentContent);
+            const upgradedText = await upgradeDocument(currentContent, id);
 
             if (upgradedText) {
                 editor.commands.setContent(upgradedText);
@@ -1173,6 +1173,11 @@ export default function EditorPage() {
     }, [editor, addToast]);
 
     const handleExport = useCallback(async (format) => {
+        if (isUpgrading || doc?.status === 'processing') {
+            addToast('Please wait for AI processing to complete before exporting.', 'warning');
+            return;
+        }
+
         setIsExporting(true);
         addToast(`Preparing ${format} export...`, 'info');
 
@@ -1302,6 +1307,7 @@ export default function EditorPage() {
                 isOpen={showReport}
                 onClose={() => setShowReport(false)}
                 documentText={editor?.getText() || ''}
+                documentId={id}
             />
 
             <DocumentSettingsModal
@@ -1427,19 +1433,19 @@ export default function EditorPage() {
                                         <div className="py-1">
                                             <button
                                                 onClick={() => handleExport('PDF')}
-                                                disabled={isExporting}
+                                                disabled={isExporting || isUpgrading || doc?.status === 'processing'}
                                                 className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 disabled:opacity-50 transition-colors"
                                             >
                                                 <Download className="h-4 w-4 text-slate-400" />
-                                                Export as PDF
+                                                {doc?.status === 'processing' ? 'Analyzing...' : 'Export as PDF'}
                                             </button>
                                             <button
                                                 onClick={() => handleExport('Word')}
-                                                disabled={isExporting}
+                                                disabled={isExporting || isUpgrading || doc?.status === 'processing'}
                                                 className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 disabled:opacity-50 transition-colors"
                                             >
                                                 <Download className="h-4 w-4 text-slate-400" />
-                                                Export as Word
+                                                {doc?.status === 'processing' ? 'Analyzing...' : 'Export as Word'}
                                             </button>
                                         </div>
                                         <div className="py-1 border-t border-slate-100">
@@ -1469,6 +1475,14 @@ export default function EditorPage() {
                     editorStateToken={editorStateToken}
                 />
             </header>
+
+            {/* Processing Status Banner */}
+            {doc?.status === 'processing' && (
+                <div className="bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-300">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm font-bold tracking-tight">Docley is analyzing your document for deep AI context... (50+ pages supported)</span>
+                </div>
+            )}
 
             {/* Editor Canvas */}
             <main className="flex-1 overflow-auto bg-[#cbd5e1] custom-scrollbar p-12">
@@ -1517,6 +1531,7 @@ export default function EditorPage() {
                 onClose={() => setShowCitationModal(false)}
                 onInsert={handleInsertCitation}
                 currentStyle={doc?.citation_style}
+                documentId={id}
             />
 
 

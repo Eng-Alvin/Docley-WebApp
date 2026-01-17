@@ -50,12 +50,10 @@ function LoadingFallback() {
   );
 }
 
-// Maintenance Guard Component
+// Maintenance Guard Component (Non-Blocking)
 function MaintenanceGuard({ children }) {
-  // 1. All hooks at the VERY top
-  const { isInitializing, isAdmin, serverError } = useAuth();
+  const { isAdmin } = useAuth();
   const [isMaintenance, setIsMaintenance] = useState(false);
-  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [connectivityError, setConnectivityError] = useState(false);
 
   useEffect(() => {
@@ -65,82 +63,27 @@ function MaintenanceGuard({ children }) {
         setIsMaintenance(response.data.maintenance_active);
         setConnectivityError(false);
       } catch (err) {
-        console.error('Error checking maintenance mode:', err);
-        // Only show connectivity error for actual network failures or 500s
-        // (401 is handled by client.js interceptor)
+        // If it's a cold start or network issue, don't block
         if (!err.response || err.response.status >= 500) {
-          setConnectivityError(true);
+          console.warn('[Maintenance] Server likely sleeping or unreachable.');
+          // We don't set connectivityError here to avoid blocking the UI
+          // The NotificationContext / Waking up indicator handles the UX
         }
-      } finally {
-        setIsSettingsLoading(false);
       }
     };
 
     checkMaintenance();
-
-    // Re-check every 5 minutes if not in real-time
     const interval = setInterval(checkMaintenance, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // 2. No early returns before the hooks above
-
-  // Show a simple skeleton while initializing (covers both auth and settings)
-  if (isInitializing || isSettingsLoading) {
-    if (serverError || connectivityError) {
-      return <ServerUnreachableOverlay />;
-    }
-    return <InitializingSkeleton />;
-  }
-
-  // Final catch for connectivity error even after initialization
-  if (connectivityError && !isAdmin) {
-    return <ServerUnreachableOverlay />;
-  }
-
-  // If maintenance is on and user is not admin, show maintenance page
+  // If we definitively know it's maintenance and user is not admin, then redirect or show page
+  // But we don't BLOCK the initial render.
   if (isMaintenance && !isAdmin) {
     return <MaintenancePage />;
   }
 
   return children;
-}
-
-// Minimal initialization screen
-function InitializingSkeleton() {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-full max-w-xs space-y-4 px-4">
-        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-500 animate-[progress_2s_ease-in-out_infinite]" style={{ width: '40%' }}></div>
-        </div>
-        <p className="text-center text-slate-400 text-xs font-medium uppercase tracking-widest">Docley is Preparing...</p>
-      </div>
-    </div>
-  );
-}
-
-// Server Unreachable Overlay
-function ServerUnreachableOverlay() {
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border-2 border-orange-500 max-w-md text-center">
-        <div className="bg-orange-100 dark:bg-orange-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Loader2 className="h-8 w-8 text-orange-600 animate-pulse" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 font-display">Server Unreachable</h2>
-        <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm leading-relaxed">
-          We're having trouble connecting to the Docley engine. This usually happens during a quick update or if your connection is unstable.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-sm font-bold shadow-lg transform transition-all active:scale-[0.98] hover:scale-[1.02]"
-        >
-          Check Connectivity
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // Redirect Loop Protection

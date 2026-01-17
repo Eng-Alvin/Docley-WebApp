@@ -6,9 +6,9 @@ import apiClient from '../api/client';
  * @param {string} instruction - Specific instructions for the AI
  * @param {string} mode - 'diagnostic' or 'upgrade'
  */
-export const transformDocument = async (text, instruction, mode = 'upgrade') => {
+export const transformDocument = async (text, instruction, mode = 'upgrade', documentId = null) => {
     try {
-        const response = await apiClient.post('/ai/transform', { text, instruction, mode });
+        const response = await apiClient.post('/ai/transform', { text, instruction, mode, documentId });
         const data = response.data;
 
         if (mode === 'upgrade' || mode === 'transform') {
@@ -25,15 +25,15 @@ export const transformDocument = async (text, instruction, mode = 'upgrade') => 
  * FEATURE: Upgrade
  * Improves the text academically.
  */
-export const upgradeDocument = async (text) => {
+export const upgradeDocument = async (text, documentId = null) => {
     const instruction = "Analyze the text and rewrite it to be more academically rigorous. Expand on the context, provide deeper elaboration on key points, and ensure the tone is scholarly.";
-    return transformDocument(text, instruction, 'upgrade');
+    return transformDocument(text, instruction, 'upgrade', documentId);
 };
 
 /**
  * FEATURE: Diagnostic
  * Returns scores and insights.
  */
-export const analyzeDocument = async (text) => {
-    return transformDocument(text, '', 'diagnostic');
+export const analyzeDocument = async (text, documentId = null) => {
+    return transformDocument(text, '', 'diagnostic', documentId);
 };

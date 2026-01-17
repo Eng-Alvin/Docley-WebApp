@@ -14,12 +14,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
+import { IngestionService } from './ingestion.service';
 import { UsageGuard } from '../users/guards/usage.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('documents')
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly ingestionService: IngestionService,
+  ) { }
 
   @Post()
   @UseGuards(UsageGuard)
@@ -28,6 +32,14 @@ export class DocumentsController {
       req.user.id,
       createDocumentDto,
     );
+
+    // Trigger ingestion in background if content is present
+    if (doc.content_html || doc.content) {
+      this.ingestionService.processDocument(doc.id).catch(err => {
+        console.error('[DocumentsController] Ingestion trigger error:', err);
+      });
+    }
+
     return doc;
   }
 
@@ -41,7 +53,14 @@ export class DocumentsController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return this.documentsService.uploadFile(req.user.id, documentId, file);
+    const result = await this.documentsService.uploadFile(req.user.id, documentId, file);
+
+    // Trigger ingestion in background
+    this.ingestionService.processDocument(documentId).catch(err => {
+      console.error('[DocumentsController] Ingestion trigger error:', err);
+    });
+
+    return result;
   }
 
   @Get()

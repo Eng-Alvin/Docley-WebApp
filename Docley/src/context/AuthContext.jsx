@@ -26,108 +26,98 @@ export function AuthProvider({ children }) {
 
     const fetchProfile = useCallback(async (userId) => {
         if (!userId) {
-            console.log('[Auth] No userId, skipping profile fetch');
             setLoading(false);
             return null;
         }
 
-        // Prevent duplicate fetches for the same ID if we already have it
         if (lastFetchedId.current === userId && profile) {
-            setLoading(false);
             return profile;
         }
 
         try {
-            console.log(`[Auth] Fetching profile via API: ${userId}`);
             setProfileLoading(true);
-            setServerError(false); // Reset error on retry
+            setServerError(false);
             lastFetchedId.current = userId;
 
-            // 10s Safety Timeout
-            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-            fetchTimeoutRef.current = setTimeout(() => {
-                if (loading || profileLoading) {
-                    console.warn('[Auth] Safety timeout reached. Server likely unreachable.');
-                    setLoading(false);
-                    setProfileLoading(false);
-                    setServerError(true); // Signal server unreachable
-                }
-            }, 10000);
-
-            // 1. Check Cache
-            const cached = sessionStorage.getItem(`profile_${userId}`);
+            // 1. Check Persistent Cache (localStorage for cold starts)
+            const cached = localStorage.getItem(`profile_v2_${userId}`);
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'is_premium')) {
                     setProfile(parsed);
-                    setProfileLoading(false);
-                    setLoading(false);
-                    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-                    return parsed;
+                    // DO NOT stop loading here if it's the first fetch, 
+                    // we want to refresh from backend silently.
                 }
             }
 
-            // 2. Fetch from Backend API via Central Client
+            // 2. Fetch from Backend API
             const response = await apiClient.get('/users/profile');
             const data = response.data;
 
             if (data) {
                 setProfile(data);
-                sessionStorage.setItem(`profile_${userId}`, JSON.stringify(data));
-                if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+                localStorage.setItem(`profile_v2_${userId}`, JSON.stringify(data));
                 return data;
             }
             return null;
         } catch (error) {
             console.error('[Auth] Profile error:', error);
-            setLoading(false);
-            setProfileLoading(false);
-            // Don't set serverError here yet, let the timeout handle true unreachability
             return null;
         } finally {
             setProfileLoading(false);
-            setLoading(false); // CRITICAL: Stop the spinner no matter what
+            setLoading(false);
         }
-    }, [profile, loading, profileLoading]);
-    // fetchProfile itself doesn't depend on profile or loading anymore, as it sets them.
+    }, [profile]);
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                fetchProfile(session.user.id, session.access_token);
-            } else {
+        let isMounted = true;
+
+        const initializeAuth = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (!isMounted) return;
+
+                setSession(session);
+                setUser(session?.user ?? null);
+
+                if (session?.user) {
+                    // Start profile fetch but don't AWAIT it if we want non-blocking
+                    // However, for the very first load, we might want to wait a bit 
+                    // or just rely on the cache.
+                    fetchProfile(session.user.id);
+                }
+
+                // CRITICAL: Immediate shell render
+                setLoading(false);
+            } catch (err) {
+                console.error('[Auth] Initialization error:', err);
                 setLoading(false);
             }
-        }).catch(err => {
-            console.error('[Auth] Initial session error:', err);
-            setLoading(false);
-            setProfileLoading(false);
-        });
+        };
 
-        // Listen for auth changes
+        initializeAuth();
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (!isMounted) return;
+
             setSession(session);
             setUser(session?.user ?? null);
+
             if (session?.user) {
-                fetchProfile(session.user.id, session.access_token).catch(() => {
-                    setLoading(false);
-                    setProfileLoading(false);
-                });
+                fetchProfile(session.user.id);
             } else {
                 setProfile(null);
-                lastFetchedId.current = null; // Reset ref if user logs out
+                lastFetchedId.current = null;
                 setLoading(false);
-                setProfileLoading(false);
             }
         });
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
         };
-    }, [fetchProfile]); // fetchProfile is a dependency because it's defined outside and used inside.
+    }, [fetchProfile]);
 
     // 2. Computed values using useMemo
     const isAdmin = useMemo(() => {
