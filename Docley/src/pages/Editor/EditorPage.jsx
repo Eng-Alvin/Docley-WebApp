@@ -9,6 +9,10 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { ResizableImage } from './extensions/ResizableImage';
 import { Extension } from '@tiptap/core';
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
+import { Popover, Transition } from '@headlessui/react';
+import React from 'react';
+import { Sparkles, CheckCircle, Wand2, MoreHorizontal, ArrowLeft, FileText, BarChart3, Loader2 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 const FontSize = Extension.create({
     name: 'fontSize',
@@ -963,6 +967,9 @@ export default function EditorPage() {
     const [showCitationModal, setShowCitationModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { addToast } = useToast();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    const [selectedLength, setSelectedLength] = useState('Medium (Research Paper)');
     const autoSaveTimeoutRef = useRef(null);
     const editorRef = useRef(null);
     const imageInputRef = useRef(null);
@@ -1143,22 +1150,21 @@ export default function EditorPage() {
         }
     }, [id, doc?.id]);
 
-    const handleUpgrade = useCallback(async () => {
+    const handleUpgrade = useCallback(async (selectedLength = null) => {
         if (!editor || doc?.permission === 'read') return;
 
         setIsUpgrading(true);
-        addToast('Starting context expansion and academic analysis...', 'info');
+        addToast(`Starting ${selectedLength || 'academic'} expansion...`, 'info');
 
         try {
             const currentContent = editor.getText();
-            // If content is too short, warn user? Or just proceed.
             if (currentContent.trim().length < 10) {
                 addToast('Document is too short to upgrade.', 'error');
                 setIsUpgrading(false);
                 return;
             }
 
-            const upgradedText = await upgradeDocument(currentContent, id);
+            const upgradedText = await upgradeDocument(currentContent, id, selectedLength);
 
             if (upgradedText) {
                 editor.commands.setContent(upgradedText);
@@ -1170,7 +1176,7 @@ export default function EditorPage() {
         } finally {
             setIsUpgrading(false);
         }
-    }, [editor, addToast]);
+    }, [editor, addToast, id, doc?.permission]);
 
     const handleExport = useCallback(async (format) => {
         if (isUpgrading || doc?.status === 'processing') {
@@ -1378,24 +1384,7 @@ export default function EditorPage() {
                             <BarChart3 className="mr-2 h-4 w-4" />
                             Diagnostics
                         </Button>
-                        <Button
-                            size="sm"
-                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/20"
-                            onClick={handleUpgrade}
-                            disabled={isUpgrading}
-                        >
-                            {isUpgrading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Upgrading...
-                                </>
-                            ) : (
-                                <>
-                                    <Wand2 className="mr-2 h-4 w-4" />
-                                    Upgrade
-                                </>
-                            )}
-                        </Button>
+
 
                         {/* More Menu */}
                         <div className="relative">
@@ -1565,6 +1554,127 @@ export default function EditorPage() {
                     </div>
                 </div>
             )}
+            {/* Floating Action Button for Upgrade */}
+            <div className="fixed bottom-6 right-6 z-50">
+                <Popover className="relative">
+                    {({ open, close }) => (
+                        <>
+                            <Transition
+                                as={React.Fragment}
+                                enter="transition ease-out duration-200"
+                                enterFrom="opacity-0 translate-y-1"
+                                enterTo="opacity-100 translate-y-0"
+                                leave="transition ease-in duration-150"
+                                leaveFrom="opacity-100 translate-y-0"
+                                leaveTo="opacity-0 translate-y-1"
+                            >
+                                <Popover.Panel className="absolute bottom-full right-0 mb-4 w-72 transform">
+                                    <div className={cn(
+                                        "overflow-hidden rounded-2xl shadow-2xl border backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-300",
+                                        isDark
+                                            ? "bg-slate-900/90 border-white/10"
+                                            : "bg-white/90 border-slate-200"
+                                    )}>
+                                        <div className="p-5">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                                    <Sparkles className="h-4 w-4 text-orange-600" />
+                                                </div>
+                                                <h3 className={cn(
+                                                    "font-bold text-sm",
+                                                    isDark ? "text-white" : "text-slate-900"
+                                                )}>
+                                                    Configure Upgrade
+                                                </h3>
+                                            </div>
+
+                                            <label className={cn(
+                                                "block text-xs font-semibold uppercase tracking-wider mb-2 opacity-70",
+                                                isDark ? "text-slate-400" : "text-slate-500"
+                                            )}>
+                                                Target Content Length?
+                                            </label>
+
+                                            <div className="space-y-2 mb-6">
+                                                {[
+                                                    { id: 'Short (Report)', label: 'Short', sub: 'Report style' },
+                                                    { id: 'Medium (Research Paper)', label: 'Medium', sub: 'Standard paper' },
+                                                    { id: 'Long (Thesis)', label: 'Long', sub: 'In-depth thesis' },
+                                                    { id: 'Custom (Case Study)', label: 'Custom', sub: 'Case study format' }
+                                                ].map((option) => (
+                                                    <button
+                                                        key={option.id}
+                                                        onClick={() => setSelectedLength(option.id)}
+                                                        className={cn(
+                                                            "w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left",
+                                                            selectedLength === option.id
+                                                                ? "border-orange-500 bg-orange-500/5 ring-4 ring-orange-500/10"
+                                                                : (isDark
+                                                                    ? "border-white/5 hover:border-white/20 bg-white/5"
+                                                                    : "border-slate-100 hover:border-slate-200 bg-slate-50")
+                                                        )}
+                                                    >
+                                                        <div>
+                                                            <p className={cn(
+                                                                "text-sm font-bold",
+                                                                selectedLength === option.id
+                                                                    ? "text-orange-500"
+                                                                    : (isDark ? "text-white" : "text-slate-900")
+                                                            )}>
+                                                                {option.label}
+                                                            </p>
+                                                            <p className="text-[10px] opacity-60">
+                                                                {option.sub}
+                                                            </p>
+                                                        </div>
+                                                        {selectedLength === option.id && (
+                                                            <CheckCircle className="h-4 w-4 text-orange-500" />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <Button
+                                                onClick={() => {
+                                                    handleUpgrade(selectedLength);
+                                                    close();
+                                                }}
+                                                disabled={isUpgrading}
+                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25 h-11"
+                                            >
+                                                {isUpgrading ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    "Proceed with Upgrade"
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </Popover.Panel>
+                            </Transition>
+
+                            <Popover.Button
+                                disabled={isUpgrading}
+                                className={cn(
+                                    "group flex items-center gap-3 h-14 pl-5 pr-6 rounded-full shadow-2xl transition-all duration-300 transform active:scale-95 outline-none",
+                                    isUpgrading
+                                        ? "bg-slate-200 cursor-not-allowed"
+                                        : "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-500/40 hover:-translate-y-1"
+                                )}
+                            >
+                                {isUpgrading ? (
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                ) : (
+                                    <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+                                )}
+                                <span className="font-bold tracking-wide">
+                                    {isUpgrading ? 'Upgrading...' : 'Upgrade'}
+                                </span>
+                            </Popover.Button>
+                        </>
+                    )}
+                </Popover>
+            </div>
         </div>
     );
 }

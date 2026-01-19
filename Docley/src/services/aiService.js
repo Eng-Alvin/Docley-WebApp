@@ -25,8 +25,11 @@ export const transformDocument = async (text, instruction, mode = 'upgrade', doc
  * FEATURE: Upgrade
  * Improves the text academically.
  */
-export const upgradeDocument = async (text, documentId = null) => {
-    const instruction = "Analyze the text and rewrite it to be more academically rigorous. Expand on the context, provide deeper elaboration on key points, and ensure the tone is scholarly.";
+export const upgradeDocument = async (text, documentId = null, length = null) => {
+    let instruction = "Analyze the text and rewrite it to be more academically rigorous. Expand on the context, provide deeper elaboration on key points, and ensure the tone is scholarly.";
+    if (length) {
+        instruction += ` The desired length/type for this output is: ${length}. Please adjust the depth and detail accordingly.`;
+    }
     return transformDocument(text, instruction, 'upgrade', documentId);
 };
 
