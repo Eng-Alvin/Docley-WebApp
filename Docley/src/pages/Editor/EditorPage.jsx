@@ -11,7 +11,6 @@ import { Extension } from '@tiptap/core';
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { Popover, Transition } from '@headlessui/react';
 import React from 'react';
-import { Sparkles, CheckCircle, Wand2, MoreHorizontal, ArrowLeft, FileText, BarChart3, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 const FontSize = Extension.create({
@@ -151,7 +150,6 @@ import {
     List,
     ListOrdered,
     Quote,
-    Type,
     Heading1,
     Heading2,
     Heading3,
