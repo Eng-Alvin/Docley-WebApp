@@ -971,10 +971,16 @@ export default function EditorPage() {
     const autoSaveTimeoutRef = useRef(null);
     const editorRef = useRef(null);
     const imageInputRef = useRef(null);
+
+    const loadedDocId = useRef(null); // Guard against double-fetching
     const [editorStateToken, setEditorStateToken] = useState(0);
 
     // Load document
     useEffect(() => {
+        // Prevent infinite loop: Only run if ID has changed
+        if (loadedDocId.current === id) return;
+        loadedDocId.current = id;
+
         const loadDocument = async () => {
             if (id === 'new') {
                 const initialState = location.state || {};
@@ -996,33 +1002,46 @@ export default function EditorPage() {
             try {
                 // 1. Load Metadata (Fast)
                 const metadata = await getDocumentMetadata(id);
+
+                // Safety check: if user navigated away while fetching
+                if (loadedDocId.current !== id) return;
+
                 setDoc(metadata);
-                setLastSaved(new Date(metadata.updated_at));
+                if (metadata.updated_at) {
+                    setLastSaved(new Date(metadata.updated_at));
+                }
                 setIsLoading(false); // Render UI immediately
 
                 // 2. Load Content (Async)
                 try {
                     const contentData = await getDocumentContent(id);
+
+                    // Safety check again
+                    if (loadedDocId.current !== id) return;
+
                     setDoc(prev => {
-                        // Prevent overwriting if user has navigated away or id changed (though effect cleanup/deps handle most)
                         if (prev?.id !== id) return prev;
                         return { ...prev, ...contentData };
                     });
                 } catch (contentError) {
                     console.error('Failed to load content:', contentError);
+                    // Do NOT auto-retry. Show error state via toast, but keep UI usable.
                     addToast('Failed to load document content. Please refresh.', 'error');
                 }
             } catch (error) {
                 console.error('Error loading document:', error);
-                addToast('Failed to load document', 'error');
-                navigate('/dashboard/documents');
+                // Do NOT navigate away immediately on error to avoid loop if error persists
+                // navigate('/dashboard/documents'); 
+                addToast('Failed to load document. Please try again.', 'error');
             } finally {
-                setIsLoading(false); // Ensure loading is off even if error
+                if (loadedDocId.current === id) {
+                    setIsLoading(false);
+                }
             }
         };
 
         loadDocument();
-    }, [id, location.state, navigate, addToast]);
+    }, [id]); // Only re-run if ID changes. stable deps like location.state omitted to prevent loops.
 
     // Optimized auto-save with debouncing
     const handleAutoSave = useCallback(async (content, html) => {
