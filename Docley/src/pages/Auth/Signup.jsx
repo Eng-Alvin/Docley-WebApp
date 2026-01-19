@@ -5,6 +5,9 @@ import { Mail, Lock, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import apiClient from '../../api/client';
+import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // Google Icon Component
@@ -20,6 +23,7 @@ const GoogleIcon = ({ className }) => (
 export default function Signup() {
     const navigate = useNavigate();
     const { signUp, signInWithGoogle } = useAuth();
+    const { addToast } = useToast();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [isLoading, setIsLoading] = useState(false);
@@ -38,18 +42,36 @@ export default function Signup() {
             [e.target.name]: e.target.value
         }));
         setError('');
+        setIsTimeout(false);
     };
+
+    const [isTimeout, setIsTimeout] = useState(false);
 
     const handleSignup = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
+        setIsTimeout(false);
 
         try {
             await signUp(formData.email, formData.password, formData.fullName);
-            setSuccess(true);
+
+            // Trigger Welcome Email (Fail silently)
+            apiClient.post('/users/welcome', {
+                email: formData.email,
+                fullName: formData.fullName
+            }).catch(err => console.error('[WelcomeEmail] Trigger failed:', err));
+
+            addToast('Welcome to Docley! Account created successfully.', 'success');
+            navigate('/dashboard');
         } catch (err) {
-            setError(err.message || 'Failed to create account');
+            if (err.status === 504 || err.message?.includes('504')) {
+                setIsTimeout(true);
+                setError('Signup delayed — retrying...');
+                // The actual retry is handled inside signUp() in context
+            } else {
+                setError(err.message || 'Failed to create account');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -68,84 +90,9 @@ export default function Signup() {
         }
     };
 
-    // Show success message after signup
-    if (success) {
-        return (
-            <div className={cn(
-                "min-h-screen flex items-center justify-center p-4 transition-colors duration-300",
-                isDark ? "bg-slate-950" : "bg-slate-50"
-            )}>
-                <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                    {isDark ? (
-                        <>
-                            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-green-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                            <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-orange-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                            <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-                        </>
-                    )}
-                </div>
-
-                <div className="w-full max-w-md relative z-10">
-                    <Card className={cn(
-                        "shadow-2xl backdrop-blur-sm border transition-all duration-300",
-                        isDark
-                            ? "bg-slate-900/50 border-white/10 shadow-black/20"
-                            : "border-slate-200/60 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.05)]"
-                    )}>
-                        <CardContent className="pt-8 pb-8 text-center">
-                            <div className={cn(
-                                "mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4",
-                                isDark ? "bg-green-500/20" : "bg-green-100"
-                            )}>
-                                <Mail className={cn(
-                                    "h-8 w-8",
-                                    isDark ? "text-green-400" : "text-green-600"
-                                )} />
-                            </div>
-                            <h2 className={cn(
-                                "text-2xl font-bold mb-2",
-                                isDark ? "text-white" : "text-slate-900"
-                            )}>
-                                Check Your Email
-                            </h2>
-                            <p className={cn(
-                                "mb-4",
-                                isDark ? "text-slate-300" : "text-slate-600"
-                            )}>
-                                We've sent a verification link to<br />
-                                <span className={cn(
-                                    "font-semibold",
-                                    isDark ? "text-white" : "text-slate-900"
-                                )}>
-                                    {formData.email}
-                                </span>
-                            </p>
-                            <p className={cn(
-                                "text-sm mb-6",
-                                isDark ? "text-slate-400" : "text-slate-500"
-                            )}>
-                                Click the link in the email to verify your account and start transforming your assignments.
-                            </p>
-                            <Link to="/login">
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "w-full",
-                                        isDark && "border-white/10 bg-white/5 text-white hover:bg-white/10"
-                                    )}
-                                >
-                                    Back to Login
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        );
+    // Success state is now handled by redirect to dashboard
+    if (false && success) {
+        return null;
     }
 
     return (
@@ -198,11 +145,14 @@ export default function Signup() {
                     <CardContent className="pt-6">
                         {error && (
                             <div className={cn(
-                                "mb-4 p-3 border text-sm rounded-lg",
-                                isDark
-                                    ? "bg-red-500/20 border-red-500/30 text-red-400"
-                                    : "bg-red-50 border-red-200 text-red-700"
+                                "mb-4 p-3 border text-sm rounded-lg flex items-center gap-2",
+                                isTimeout
+                                    ? "bg-orange-500/10 border-orange-500/30 text-orange-400"
+                                    : (isDark
+                                        ? "bg-red-500/20 border-red-500/30 text-red-400"
+                                        : "bg-red-50 border-red-200 text-red-700")
                             )}>
+                                {isTimeout && <Loader2 className="h-4 w-4 animate-spin" />}
                                 {error}
                             </div>
                         )}

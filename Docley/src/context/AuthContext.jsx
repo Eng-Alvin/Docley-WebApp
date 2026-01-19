@@ -135,19 +135,38 @@ export function AuthProvider({ children }) {
 
     // Sign up with email and password
     const signUp = async (email, password, fullName) => {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: fullName,
-                },
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+        const attemptSignup = async (isRetry = false) => {
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                        },
+                        emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    },
+                });
 
-        if (error) throw error;
-        return data;
+                if (error) {
+                    // Check for Supabase 504 / Gateway Timeout
+                    if ((error.status === 504 || error.message?.includes('504')) && !isRetry) {
+                        console.warn('[Signup] Timeout detected, retrying once...');
+                        return await attemptSignup(true);
+                    }
+                    throw error;
+                }
+                return data;
+            } catch (err) {
+                if ((err.status === 504 || err.message?.includes('504')) && !isRetry) {
+                    console.warn('[Signup] Timeout detected in catch, retrying once...');
+                    return await attemptSignup(true);
+                }
+                throw err;
+            }
+        };
+
+        return await attemptSignup(false);
     };
 
     // Sign in with email and password
@@ -159,12 +178,8 @@ export function AuthProvider({ children }) {
 
         if (error) throw error;
 
-        // Check if email is verified
-        if (data.user && !data.user.email_confirmed_at) {
-            await supabase.auth.signOut();
-            throw new Error('Please verify your email before signing in. Check your inbox for the verification link.');
-        }
-
+        // We no longer block sign-in for unverified users. 
+        // Verification status is handled via banners and action restrictions.
         return data;
     };
 
@@ -248,10 +263,6 @@ export function AuthProvider({ children }) {
         signIn: async (email, password) => {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            if (data.user && !data.user.email_confirmed_at) {
-                await supabase.auth.signOut();
-                throw new Error('Please verify your email first.');
-            }
             return data;
         },
         signInWithGoogle: async () => {

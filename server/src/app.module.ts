@@ -14,6 +14,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { PaymentsModule } from './modules/payments/payments.module';
 import { HealthModule } from './health/health.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { MailModule } from './modules/mail/mail.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -30,6 +31,7 @@ import { AppController } from './app.controller';
     PaymentsModule,
     HealthModule,
     MaintenanceModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

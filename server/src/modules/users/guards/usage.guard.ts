@@ -26,12 +26,37 @@ export class UsageGuard implements CanActivate {
       return true;
     }
 
+    const path: string = request.route?.path || request.path || '';
+
+    // EMAIL VERIFICATION CHECK (New Requirement)
+    // Restrict premium actions for unverified users
+    const isEmailVerified = user.email_confirmed_at != null;
+    const isPremiumAction =
+      (path === '/ai/transform' && (request.body?.mode === 'upgrade' || request.body?.mode === 'transform')) ||
+      (path.includes('/export')); // Assuming export paths contain '/export'
+
+    if (!isEmailVerified && isPremiumAction) {
+      throw new HttpException({
+        statusCode: HttpStatus.FORBIDDEN,
+        error: 'Email Not Verified',
+        message: 'Please verify your email to unlock exports and premium AI upgrades.',
+        notification: {
+          code: 'VERIFICATION_REQUIRED',
+          message: 'Please verify your email to unlock all features.',
+          priority: 'high',
+          action: {
+            label: 'Resend Verification',
+            type: 'navigate',
+            payload: { path: '/dashboard/settings' }
+          }
+        }
+      }, HttpStatus.FORBIDDEN);
+    }
+
     // Paid users bypass limits (prefer users.is_premium; fallback to legacy usage.subscription_tier)
     if (usage?.is_premium === true || usage?.subscription_tier === 'pro') {
       return true;
     }
-
-    const path: string = request.route?.path || request.path || '';
 
     try {
       // Documents create: consume a document slot

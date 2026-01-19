@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { DocleyLogo } from '../ui/DocleyLogo';
 import { OnboardingFlow, isOnboardingCompleted } from '../onboarding/OnboardingFlow';
+import { VerificationBanner } from '../ui/VerificationBanner';
 import { submitFeedback } from '../../services/feedbackService';
 
 export function DashboardLayout() {
@@ -276,7 +277,10 @@ export function DashboardLayout() {
             </aside>
 
             {/* Main Content - Add left margin/padding to account for fixed sidebar */}
-            <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar lg:ml-[70px]">
+            <main className="flex-1 min-w-0 flex flex-col overflow-hidden lg:ml-[70px]">
+                {/* Verification Banner */}
+                <VerificationBanner />
+
                 {/* Professional Header */}
                 <header className={cn(
                     "sticky top-0 z-20 flex items-center gap-4 px-4 lg:px-6 xl:px-8 py-3 md:py-4 backdrop-blur-xl border-b transition-all duration-300",
@@ -542,7 +546,7 @@ export function DashboardLayout() {
                     </div>
                 </header>
 
-                <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
                     <Outlet />
                 </div>
             </main>

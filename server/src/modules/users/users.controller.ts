@@ -11,10 +11,22 @@ import { UsersService } from './users.service';
 import { SubscriptionGuard } from '../../common/guards/subscription.guard';
 import { UpdateUserProfileDto, UserProfileDto } from './dto/user-profile.dto';
 
+import { MailService } from '../mail/mail.service';
+
 @Controller('users')
 @UseGuards(SubscriptionGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly mailService: MailService,
+  ) { }
+
+  @Post('welcome')
+  async sendWelcomeEmail(@Body() body: { email: string; fullName: string }) {
+    // Non-blocking call
+    this.mailService.sendWelcomeEmail(body.email, body.fullName).catch(() => { });
+    return { success: true };
+  }
 
   @Patch('password')
   async updatePassword(@Body() body: any, @Req() req: any) {
