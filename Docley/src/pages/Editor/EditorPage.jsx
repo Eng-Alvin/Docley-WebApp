@@ -186,7 +186,7 @@ import { Pagination } from './extensions/Pagination';
 import './Editor.css';
 import { ColorPicker } from '../../components/ui/ColorPicker';
 import { exportToPDF, exportToWord } from './lib/exportUtils';
-import { getDocument, updateDocument, autoSaveDocument, deleteDocument, permanentlyDeleteDocument } from '../../services/documentsService';
+import { getDocumentMetadata, getDocumentContent, updateDocument, autoSaveDocument, deleteDocument, permanentlyDeleteDocument } from '../../services/documentsService';
 import { upgradeDocument } from '../../services/aiService';
 import { DocumentSettingsModal } from '../../components/modals/DocumentSettingsModal';
 import { CitationModal } from '../../components/modals/CitationModal';
@@ -994,15 +994,30 @@ export default function EditorPage() {
             }
 
             try {
-                const document = await getDocument(id);
-                setDoc(document);
-                setLastSaved(new Date(document.updated_at));
+                // 1. Load Metadata (Fast)
+                const metadata = await getDocumentMetadata(id);
+                setDoc(metadata);
+                setLastSaved(new Date(metadata.updated_at));
+                setIsLoading(false); // Render UI immediately
+
+                // 2. Load Content (Async)
+                try {
+                    const contentData = await getDocumentContent(id);
+                    setDoc(prev => {
+                        // Prevent overwriting if user has navigated away or id changed (though effect cleanup/deps handle most)
+                        if (prev?.id !== id) return prev;
+                        return { ...prev, ...contentData };
+                    });
+                } catch (contentError) {
+                    console.error('Failed to load content:', contentError);
+                    addToast('Failed to load document content. Please refresh.', 'error');
+                }
             } catch (error) {
                 console.error('Error loading document:', error);
                 addToast('Failed to load document', 'error');
                 navigate('/dashboard/documents');
             } finally {
-                setIsLoading(false);
+                setIsLoading(false); // Ensure loading is off even if error
             }
         };
 
@@ -1151,6 +1166,12 @@ export default function EditorPage() {
     const handleUpgrade = useCallback(async (selectedLength = null) => {
         if (!editor || doc?.permission === 'read') return;
 
+        // Guard: Content check
+        if (id !== 'new' && doc?.content === undefined && doc?.content_html === undefined) {
+            addToast('Please wait for document content to load.', 'info');
+            return;
+        }
+
         setIsUpgrading(true);
         addToast(`Starting ${selectedLength || 'academic'} expansion...`, 'info');
 
@@ -1179,6 +1200,12 @@ export default function EditorPage() {
     const handleExport = useCallback(async (format) => {
         if (isUpgrading || doc?.status === 'processing') {
             addToast('Please wait for AI processing to complete before exporting.', 'warning');
+            return;
+        }
+
+        // Guard: Content check
+        if (id !== 'new' && doc?.content === undefined && doc?.content_html === undefined) {
+            addToast('Please wait for document content to load.', 'info');
             return;
         }
 
@@ -1377,7 +1404,8 @@ export default function EditorPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowReport(true)}
-                            className="text-slate-600 hover:text-indigo-600"
+                            disabled={id !== 'new' && doc?.content === undefined && doc?.content_html === undefined}
+                            className="text-slate-600 hover:text-indigo-600 disabled:opacity-50"
                         >
                             <BarChart3 className="mr-2 h-4 w-4" />
                             Diagnostics

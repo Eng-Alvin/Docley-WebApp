@@ -64,6 +64,26 @@ export async function getDocument(id) {
     }
 }
 
+export async function getDocumentMetadata(id) {
+    try {
+        const response = await apiClient.get(`/documents/${id}/meta`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching document metadata ${id}:`, error);
+        throw error;
+    }
+}
+
+export async function getDocumentContent(id) {
+    try {
+        const response = await apiClient.get(`/documents/${id}/content`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching document content ${id}:`, error);
+        throw error;
+    }
+}
+
 export async function updateDocument(id, updates) {
     const updateData = {};
     if (updates.title !== undefined) updateData.title = updates.title;

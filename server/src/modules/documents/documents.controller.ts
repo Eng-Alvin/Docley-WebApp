@@ -77,6 +77,16 @@ export class DocumentsController {
     return this.documentsService.findOne(id, req.user.id);
   }
 
+  @Get(':id/meta')
+  async getMetadata(@Req() req, @Param('id') id: string) {
+    return this.documentsService.getMetadata(id, req.user.id);
+  }
+
+  @Get(':id/content')
+  async getContent(@Req() req, @Param('id') id: string) {
+    return this.documentsService.getContent(id, req.user.id);
+  }
+
   @Patch(':id')
   async update(@Req() req, @Param('id') id: string, @Body() body: any) {
     return this.documentsService.update(id, body, req.user.id);

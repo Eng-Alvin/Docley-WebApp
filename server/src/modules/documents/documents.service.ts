@@ -11,7 +11,7 @@ export class DocumentsService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   private get client() {
     return this.supabaseService.getClient();
@@ -84,6 +84,36 @@ export class DocumentsService {
     }
 
     return { ...data, permission: 'owner' };
+  }
+
+  async getMetadata(id: string, userId: string) {
+    const { data, error } = await this.client
+      .from('documents')
+      .select('id, title, updated_at, status, document_type, academic_level, citation_style, margins, header_text, word_count')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      throw new NotFoundException('Document metadata not found');
+    }
+    return { ...data, permission: 'owner' };
+  }
+
+  async getContent(id: string, userId: string) {
+    const { data, error } = await this.client
+      .from('documents')
+      .select('content, content_html')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      throw new NotFoundException('Document content not found');
+    }
+    return data;
   }
 
   async update(id: string, updates: any, userId: string) {
