@@ -22,7 +22,6 @@ export function AuthProvider({ children }) {
 
     // Refs for safety
     const lastFetchedId = useRef(null);
-    const fetchTimeoutRef = useRef(null);
 
     const fetchProfile = useCallback(async (userId) => {
         if (!userId) {
@@ -62,6 +61,8 @@ export function AuthProvider({ children }) {
             return null;
         } catch (error) {
             console.error('[Auth] Profile error:', error);
+            // Don't set error state for background refreshes to avoid UI flickering
+            if (!profile) setServerError(true);
             return null;
         } finally {
             setProfileLoading(false);
@@ -82,13 +83,9 @@ export function AuthProvider({ children }) {
                 setUser(session?.user ?? null);
 
                 if (session?.user) {
-                    // Start profile fetch but don't AWAIT it if we want non-blocking
-                    // However, for the very first load, we might want to wait a bit 
-                    // or just rely on the cache.
                     fetchProfile(session.user.id);
                 }
 
-                // CRITICAL: Immediate shell render
                 setLoading(false);
             } catch (err) {
                 console.error('[Auth] Initialization error:', err);
@@ -121,20 +118,19 @@ export function AuthProvider({ children }) {
 
     // 2. Computed values using useMemo
     const isAdmin = useMemo(() => {
-        // High-confidence role from DB table takes precedence
         return profile?.role === 'admin';
-    }, [profile]);
+    }, [profile?.role]);
 
     const isPremium = useMemo(() => {
         return profile?.is_premium === true;
-    }, [profile]);
+    }, [profile?.is_premium]);
 
     const isEmailVerified = useMemo(() => {
         return user?.email_confirmed_at != null;
-    }, [user]);
+    }, [user?.email_confirmed_at]);
 
-    // Sign up with email and password
-    const signUp = async (email, password, fullName) => {
+    // 3. User Actions wrapped in useCallback
+    const signUp = useCallback(async (email, password, fullName) => {
         const attemptSignup = async (isRetry = false) => {
             try {
                 const { data, error } = await supabase.auth.signUp({
@@ -149,7 +145,6 @@ export function AuthProvider({ children }) {
                 });
 
                 if (error) {
-                    // Check for Supabase 504 / Gateway Timeout
                     if ((error.status === 504 || error.message?.includes('504')) && !isRetry) {
                         console.warn('[Signup] Timeout detected, retrying once...');
                         return await attemptSignup(true);
@@ -167,24 +162,19 @@ export function AuthProvider({ children }) {
         };
 
         return await attemptSignup(false);
-    };
+    }, []);
 
-    // Sign in with email and password
-    const signIn = async (email, password) => {
+    const signIn = useCallback(async (email, password) => {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
 
         if (error) throw error;
-
-        // We no longer block sign-in for unverified users. 
-        // Verification status is handled via banners and action restrictions.
         return data;
-    };
+    }, []);
 
-    // Sign in with Google
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = useCallback(async () => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
@@ -194,36 +184,32 @@ export function AuthProvider({ children }) {
 
         if (error) throw error;
         return data;
-    };
+    }, []);
 
-    // Sign out
-    const signOut = async () => {
+    const signOut = useCallback(async () => {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
-    };
+    }, []);
 
-    // Reset password (send reset email)
-    const resetPassword = async (email) => {
+    const resetPassword = useCallback(async (email) => {
         const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/reset-password`,
         });
 
         if (error) throw error;
         return data;
-    };
+    }, []);
 
-    // Update password (after clicking reset link)
-    const updatePassword = async (newPassword) => {
+    const updatePassword = useCallback(async (newPassword) => {
         const { data, error } = await supabase.auth.updateUser({
             password: newPassword,
         });
 
         if (error) throw error;
         return data;
-    };
+    }, []);
 
-    // Resend verification email
-    const resendVerificationEmail = async (email) => {
+    const resendVerificationEmail = useCallback(async (email) => {
         const { data, error } = await supabase.auth.resend({
             type: 'signup',
             email,
@@ -234,72 +220,51 @@ export function AuthProvider({ children }) {
 
         if (error) throw error;
         return data;
-    };
+    }, []);
 
-    const value = {
+    const refreshProfile = useCallback(() => {
+        return fetchProfile(user?.id);
+    }, [fetchProfile, user?.id]);
+
+    const value = useMemo(() => ({
         user,
         session,
         profile,
         loading,
         profileLoading,
         serverError,
-        isInitializing: loading, // Backwards compatibility for components using this
+        isInitializing: loading,
         isAuthenticated: !!user,
         isAdmin,
         isPremium,
         isEmailVerified,
-        signUp: async (email, password, fullName) => {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: { full_name: fullName },
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
-                },
-            });
-            if (error) throw error;
-            return data;
-        },
-        signIn: async (email, password) => {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            return data;
-        },
-        signInWithGoogle: async () => {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: `${window.location.origin}/auth/callback` },
-            });
-            if (error) throw error;
-            return data;
-        },
-        signOut: async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-        },
-        resetPassword: async (email) => {
-            const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-            if (error) throw error;
-            return data;
-        },
-        updatePassword: async (newPassword) => {
-            const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-            if (error) throw error;
-            return data;
-        },
-        resendVerificationEmail: async (email) => {
-            const { data, error } = await supabase.auth.resend({
-                type: 'signup',
-                email,
-                options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-            });
-            if (error) throw error;
-            return data;
-        },
-        refreshProfile: () => fetchProfile(user?.id)
-    };
+        signUp,
+        signIn,
+        signInWithGoogle,
+        signOut,
+        resetPassword,
+        updatePassword,
+        resendVerificationEmail,
+        refreshProfile
+    }), [
+        user,
+        session,
+        profile,
+        loading,
+        profileLoading,
+        serverError,
+        isAdmin,
+        isPremium,
+        isEmailVerified,
+        signUp,
+        signIn,
+        signInWithGoogle,
+        signOut,
+        resetPassword,
+        updatePassword,
+        resendVerificationEmail,
+        refreshProfile
+    ]);
 
     return (
         <AuthContext.Provider value={value}>

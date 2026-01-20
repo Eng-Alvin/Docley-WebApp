@@ -1,5 +1,4 @@
-import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Media, Header } from 'docx';
+
 
 /**
  * Semantic Block Model for PDF Rendering
@@ -86,6 +85,7 @@ export const exportToPDF = async (element, fileName = 'document.pdf', options = 
     }
 
     try {
+        const { jsPDF } = await import('jspdf');
         const doc = new jsPDF({
             orientation: 'p',
             unit: 'pt',
@@ -251,6 +251,7 @@ async function fetchImageAsBuffer(url) {
  * Convert HTML to DOCX paragraphs
  */
 async function htmlToDocxElements(htmlString) {
+    const { Paragraph, TextRun, HeadingLevel, ImageRun } = await import('docx');
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
     const elements = [];
@@ -519,6 +520,7 @@ export const exportToWord = async (htmlContent, fileName = 'document.docx', opti
     } = options;
 
     try {
+        const { Document, Packer, Header, Paragraph, TextRun } = await import('docx');
         // Clean HTML content
         const cleanHTML = deepCleanHTML(htmlContent);
 

@@ -44,13 +44,18 @@ export async function getDocuments(filters = {}) {
                 status: filters.status,
                 academic_level: filters.academicLevel,
                 type: filters.type,
+                page: filters.page,
+                limit: filters.limit,
             }
         });
 
+        // Backend now returns { data: [], meta: {} }
+        // We return the full object so components can access meta for pagination
         return response.data;
     } catch (error) {
         console.error('Error fetching documents:', error);
-        return [];
+        // Return empty structure to prevent crashes
+        return { data: [], meta: { total: 0, page: 1, limit: 10, hasMore: false } };
     }
 }
 
@@ -118,6 +123,6 @@ export async function autoSaveDocument(id, content, contentHtml) {
 }
 
 export async function getDocumentCount() {
-    const docs = await getDocuments();
-    return docs.length;
+    const response = await getDocuments({ limit: 1 }); // Minimized fetch
+    return response.meta?.total || 0;
 }

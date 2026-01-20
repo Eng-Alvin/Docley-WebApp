@@ -58,21 +58,35 @@ export default function DashboardHome() {
 
     const loadDocuments = async () => {
         try {
-            const docs = await getDocuments({ limit: 6 });
-            setDocuments(docs);
+            const { data } = await getDocuments({ limit: 6 });
+            setDocuments(data || []);
 
             // Calculate stats
-            const allDocs = await getDocuments();
+            // For stats, we'll need to fetch more or trust backend aggregation later.
+            // For now, let's fetch a larger batch for stats if needed, or rely on what we have.
+            // Ideally, backend should provide a /stats endpoint.
+            // Reverting to previous logic but being mindful of pagination.
+            // We can check 'meta.total' from the first call for totalDocuments.
+            const totalDocuments = data?.length ? (await getDocuments({ limit: 1 })).meta.total : 0;
+
+            // For words and upgrades, we can't iterate ALL docs anymore if there are thousands.
+            // We'll calculate based on the recent ones we fetched or implement a specific stats endpoint later.
+            // For now, let's use the local 'data' batch for an approximation or fetch slightly more.
+
+            // Temporary: Fetch up to 100 for stats aggregation to be semi-accurate without fetching 1000s
+            const statsResponse = await getDocuments({ limit: 100 });
+            const allDocs = statsResponse.data || [];
+
             const totalWords = allDocs.reduce((sum, doc) => sum + (doc.word_count || 0), 0);
             const upgradedCount = allDocs.filter(doc => doc.status === 'upgraded').length;
 
             // Get recent activity (last 5 documents)
-            const recentActivity = allDocs
+            const recentActivity = (data || [])
                 .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
                 .slice(0, 5);
 
             setStats({
-                totalDocuments: allDocs.length,
+                totalDocuments,
                 totalWords,
                 upgradedCount,
                 recentActivity

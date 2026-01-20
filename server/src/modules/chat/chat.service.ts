@@ -9,6 +9,7 @@ import * as dotenv from 'dotenv';
 import { DIAGNOSTIC_PROMPT } from './prompts/diagnostic';
 import { CITATION_PROMPT } from './prompts/citation';
 import { RetrievalService } from '../documents/retrieval.service';
+import DOMPurify from 'isomorphic-dompurify';
 
 dotenv.config();
 
@@ -122,14 +123,14 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
       console.log('[ChatService] Received response from Gemini.');
 
       // Parse the JSON string on the server side
-      try {
-        const parsedData = JSON.parse(generatedText);
-        return parsedData; // Return the clean object directly
-      } catch (parseError) {
-        console.error('[ChatService] JSON Parse Error:', parseError);
-        console.error('[ChatService] Raw Text:', generatedText);
-        throw new InternalServerErrorException('Failed to parse AI response');
+      const parsed = this.extractJsonFromResponse(generatedText);
+
+      // Sanitize specifically the 'result' field if it exists (which contains the HTML)
+      if (parsed && typeof parsed.result === 'string') {
+        parsed.result = this.sanitizeAIHTML(parsed.result);
       }
+
+      return parsed;
     } catch (error) {
       console.error('[ChatService] Error generating content:', error);
       console.error(
@@ -140,5 +141,46 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
         `Failed to generate content: ${error.message} `,
       );
     }
+  }
+
+  private extractJsonFromResponse(rawText: string): any {
+    try {
+      if (!rawText) return {};
+
+      // Regex to strip markdown code blocks (```json ... ``` or just ``` ... ```)
+      let cleanText = rawText
+        .replace(/^```json\s*/i, '') // Remove top ```json
+        .replace(/^```\s*/i, '')     // Remove top ```
+        .replace(/```\s*$/, '')      // Remove bottom ```
+        .trim();
+
+      return JSON.parse(cleanText);
+    } catch (error) {
+      console.error('[ChatService] JSON Parsing Logic Failed:', error.message);
+      console.warn('[ChatService] Returning raw text as fallback.');
+
+      // Return a safe fallback object so the frontend doesn't crash
+      return {
+        result: rawText,
+        fallback: true,
+        error: 'JSON_PARSE_FAILED'
+      };
+    }
+  }
+  /**
+   * Sanitize HTML content to prevent XSS while allowing safe document formatting.
+   */
+  private sanitizeAIHTML(html: string): string {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p', 'b', 'i', 'strong', 'em', 'u', 's', 'span', 'div',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'br', 'hr',
+        'blockquote', 'pre', 'code',
+      ],
+      ALLOWED_ATTR: ['class', 'style'], // Allow basic styling
+      FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+    });
   }
 }

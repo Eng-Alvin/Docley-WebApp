@@ -61,8 +61,8 @@ export default function DashboardDocuments() {
     const loadDocuments = async () => {
         setIsLoading(true);
         try {
-            const docs = await getDocuments(filters);
-            setDocuments(docs);
+            const { data } = await getDocuments(filters);
+            setDocuments(data || []);
         } catch (error) {
             console.error('Error loading documents:', error);
             addToast('Failed to load documents', 'error');

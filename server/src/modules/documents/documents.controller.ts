@@ -68,6 +68,8 @@ export class DocumentsController {
     const filters = {
       status: query.status,
       academic_level: query.academic_level,
+      page: query.page ? parseInt(query.page) : 1,
+      limit: query.limit ? parseInt(query.limit) : 20,
     };
     return this.documentsService.findAll(req.user.id, filters);
   }

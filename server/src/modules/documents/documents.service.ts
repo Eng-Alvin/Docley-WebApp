@@ -47,10 +47,18 @@ export class DocumentsService {
 
   async findAll(
     userId: string,
-    filters?: { status?: string; academic_level?: string },
+    filters?: { status?: string; academic_level?: string; page?: number; limit?: number },
   ) {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     // Query documents STRICTLY owned by the current user
-    let query = this.client.from('documents').select('*').eq('user_id', userId);
+    let query = this.client
+      .from('documents')
+      .select('id, title, updated_at, status, document_type, academic_level, word_count', { count: 'exact' }) // Select specific fields for list view
+      .eq('user_id', userId);
     // .is('deleted_at', null); // Simplified to resolve parsing error
 
     if (filters?.status) {
@@ -60,14 +68,23 @@ export class DocumentsService {
       query = query.eq('academic_level', filters.academic_level);
     }
 
-    const { data, error } = await query.order('updated_at', {
-      ascending: false,
-    });
+    const { data, error, count } = await query
+      .order('updated_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       throw new InternalServerErrorException(error.message);
     }
-    return data;
+
+    return {
+      data,
+      meta: {
+        total: count,
+        page,
+        limit,
+        hasMore: count > to + 1,
+      }
+    };
   }
 
   async findOne(id: string, userId: string) {
