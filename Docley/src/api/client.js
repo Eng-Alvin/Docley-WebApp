@@ -39,6 +39,15 @@ apiClient.interceptors.request.use(
         // Smoke Test Indicator
         console.log('🚀 API Request:', config.method.toUpperCase(), config.url);
 
+        // STRICT GUARD: Prevent malformed URLs containing error messages
+        // This acts as a trap to identify the code responsible for appending errors to URLs
+        if (config.url && /(%20|\s)(net::|ERR_)/i.test(config.url)) {
+            console.error('🚨 MALFORMED URL DETECTED:', config.url);
+            console.trace('Trace for malformed URL construction');
+            // Reject immediately to protect backend logs
+            return Promise.reject(new Error(`Blocked malformed request: ${config.url}`));
+        }
+
         // Cold Start Detection: If request takes > 2s, signal "Waking up server..."
         config.metadata = { startTime: Date.now() };
         config.slowRequestTimeout = setTimeout(() => {
