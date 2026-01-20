@@ -76,13 +76,15 @@ export class DocumentsService {
       throw new InternalServerErrorException(error.message);
     }
 
+    const totalCount = count ?? 0;
+
     return {
       data,
       meta: {
-        total: count,
+        total: totalCount,
         page,
         limit,
-        hasMore: count > to + 1,
+        hasMore: totalCount > to + 1,
       }
     };
   }
