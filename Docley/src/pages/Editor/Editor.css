@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,300&family=Source+Code+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
+/* Layout Constants */
+:root {
+    --editor-header-height: 48px;
+    --editor-toolbar-height: 48px;
+    --editor-banner-height: 40px;
+}
+
 /* Editor Canvas */
 .editor-canvas {
     perspective: 1000px;
@@ -13,8 +20,7 @@
     background-color: white;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     margin: 20px auto;
-    min-height: 1056px;
-    /* Letter Height */
+    /* Removed min-height to allow viewport-contained layout */
     width: 816px;
     /* Letter Width (8.5in) */
     outline: none !important;
