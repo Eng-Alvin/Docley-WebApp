@@ -258,10 +258,9 @@ export default function DashboardSettings() {
                                     </button>
 
                                     <button
-                                        onClick={() => {
-                                            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                                            setTheme(systemTheme);
-                                            addToast(`System theme detected: ${systemTheme}`, 'info');
+                                        onCheckedChange={(checked) => {
+                                            const newTheme = checked ? 'system' : 'light';
+                                            updateTheme(newTheme);
                                         }}
                                         className={cn(
                                             "group relative flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -299,7 +298,6 @@ export default function DashboardSettings() {
                                             checked={formData.emailAlerts}
                                             onChange={(e) => {
                                                 setFormData({ ...formData, emailAlerts: e.target.checked });
-                                                addToast('Notification settings updated', 'info');
                                             }}
                                         />
                                         <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -317,7 +315,6 @@ export default function DashboardSettings() {
                                             checked={formData.marketing}
                                             onChange={(e) => {
                                                 setFormData({ ...formData, marketing: e.target.checked });
-                                                addToast('Marketing preferences updated', 'info');
                                             }}
                                         />
                                         <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>

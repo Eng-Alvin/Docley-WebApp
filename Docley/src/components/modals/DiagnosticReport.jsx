@@ -45,7 +45,8 @@ export function DiagnosticReport({ isOpen, onClose, documentText, documentId = n
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100"
+                        disabled={loading}
+                        className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -56,7 +57,7 @@ export function DiagnosticReport({ isOpen, onClose, documentText, documentId = n
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <Loader2 className="h-12 w-12 text-indigo-600 animate-spin mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900">Analyzing Document...</h3>
+                            <h3 className="text-lg font-medium text-slate-900">Processing...</h3>
                             <p className="text-slate-500">Evaluating structure, tone, and clarity</p>
                         </div>
                     ) : error ? (
@@ -148,7 +149,7 @@ export function DiagnosticReport({ isOpen, onClose, documentText, documentId = n
 
                 {/* Footer */}
                 <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
-                    <Button variant="outline" onClick={onClose} className="border-slate-200">
+                    <Button variant="outline" onClick={onClose} className="border-slate-200" disabled={loading}>
                         Close Report
                     </Button>
                 </div>

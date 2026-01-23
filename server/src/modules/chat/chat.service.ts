@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   BadRequestException,
+  RequestTimeoutException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -99,7 +100,7 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
             "${text}"
             
             Instruction:
-            ${instruction || 'Improve the academic tone, clarity, and flow of this text, with out changing the core idea of the text. Make sure your upgrade is plagarism free if it is tested using a plagarism tool.'}
+            ${instruction || 'Revise this text to a formal academic standard. Improve clarity, coherence, and scholarly tone without altering the original meaning. Standardize and correct all in-text citations and references to accepted academic formats. Ensure the rewritten content is fully original, paraphrased, and plagiarism-safe under automated plagiarism detection. Do not add new ideas or remove existing ones..'}
             
             Return a JSON object with a single key "result" containing the improved text as valid HTML fragments.
             Example: { "result": "<p>Improved text...</p>" }
@@ -117,10 +118,34 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
 
     try {
       console.log('[ChatService] Sending prompt to Gemini...');
-      const result = await this.model.generateContent(prompt);
+      const startTime = Date.now();
+
+      // Create a timeout promise that rejects after 60 seconds
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new RequestTimeoutException(
+                'AI processing timed out after 60 seconds. Please try again with a shorter text or specific instruction.',
+              ),
+            ),
+          60000,
+        ),
+      );
+
+      // Race the generation against the timeout
+      const result: any = await Promise.race([
+        this.model.generateContent(prompt),
+        timeoutPromise,
+      ]);
+
+      const duration = Date.now() - startTime;
+      console.log(
+        `[ChatService] Received response from Gemini in ${duration}ms.`,
+      );
+
       const response = await result.response;
       const generatedText = response.text();
-      console.log('[ChatService] Received response from Gemini.');
 
       // Parse the JSON string on the server side
       const parsed = this.extractJsonFromResponse(generatedText);
@@ -132,6 +157,13 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
 
       return parsed;
     } catch (error) {
+      const duration = Date.now() - (Date.now() - 60000); // Approximate if timed out, but better to track start time in outer scope if needed.
+      // Actually simpler:
+      if (error instanceof RequestTimeoutException) {
+        console.error('[ChatService] Request timed out.');
+        throw error;
+      }
+
       console.error('[ChatService] Error generating content:', error);
       console.error(
         '[ChatService] Error Details:',

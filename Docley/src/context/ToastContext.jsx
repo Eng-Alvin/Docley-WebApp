@@ -2,29 +2,42 @@ import { useNotification } from './NotificationContext';
 
 /**
  * LEGACY WRAPPER: Re-routes useToast to the new NotificationProvider.
- * This ensures existing code continues to work while transitioning to
- * the backend-driven system.
+ * Maps legacy addToast(message, type) calls to the new notification system.
  */
 export const useToast = () => {
-    const { toast } = useNotification();
+    const { showNotification, dismissNotification } = useNotification();
 
-    // Map legacy addToast(message, type) to new showNotification({ message, priority })
     const addToast = (message, type = 'info') => {
-        const priorityMap = {
-            success: 'minimal',
-            error: 'normal',
-            warning: 'normal',
-            info: 'minimal'
+        // Map legacy types to new notification types
+        const typeMap = {
+            success: 'success',
+            error: 'failure',
+            warning: 'failure',
+            info: 'success',
+            processing: 'processing',
+            action: 'action',
+            failure: 'failure'
         };
 
-        toast({
+        const ttlMap = {
+            success: 2500,
+            error: 5000,
+            warning: 4000,
+            info: 2500,
+            failure: 5000,
+            processing: null,
+            action: null
+        };
+
+        showNotification({
+            type: typeMap[type] || 'success',
             message,
-            priority: priorityMap[type] || 'minimal',
-            ttl: type === 'success' ? 3000 : 5000
+            ttl: ttlMap[type] !== undefined ? ttlMap[type] : 2500
         });
     };
 
-    return { addToast, toast: addToast };
+
+    return { addToast, toast: addToast, dismissNotification };
 };
 
 // Dummy provider for backward compatibility (in case it's still imported)

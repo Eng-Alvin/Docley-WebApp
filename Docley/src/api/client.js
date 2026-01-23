@@ -24,7 +24,7 @@ const getBaseURL = () => {
 
 const apiClient = axios.create({
     baseURL: getBaseURL(),
-    timeout: 30000, // Increased to 30s to match backend processing speed
+    timeout: 60000, // 60s hard limit to match backend strict timeout
     headers: {
         'Content-Type': 'application/json',
     }

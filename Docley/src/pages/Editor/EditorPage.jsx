@@ -1415,11 +1415,19 @@ export default function EditorPage() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="w-px h-6 bg-slate-200" />
-
-
 
                         <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUpgrade()}
+                            disabled={isUpgrading || doc?.status === 'processing'}
+                            className="text-slate-600 hover:text-indigo-600 disabled:opacity-50"
+                        >
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Upgrade
+                        </Button>
+
+                        <div className="w-px h-6 bg-slate-200" />                        <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowReport(true)}
@@ -1511,10 +1519,12 @@ export default function EditorPage() {
             </header>
 
             {/* Processing Status Banner */}
-            {doc?.status === 'processing' && (
+            {(doc?.status === 'processing' || isUpgrading) && (
                 <div className="bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-300">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm font-bold tracking-tight">Docley is analyzing your document for deep AI context... (50+ pages supported)</span>
+                    <span className="text-sm font-bold tracking-tight">
+                        {isUpgrading ? 'Processing...' : 'Docley is analyzing your document...'}
+                    </span>
                 </div>
             )}
 
