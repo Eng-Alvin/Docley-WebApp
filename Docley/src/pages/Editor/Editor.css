@@ -14,22 +14,27 @@
     transition: transform 0.2s ease-out;
 }
 
-/* Page Styling */
+/* Page Styling - Google Docs Style */
 .ProseMirror {
     position: relative;
     background-color: white;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-    margin: 20px auto;
-    /* Removed min-height to allow viewport-contained layout */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    margin: 24px auto;
+    min-height: 1056px;
+    /* US Letter height (11in at 96dpi) */
     width: 816px;
-    /* Letter Width (8.5in) */
+    /* US Letter width (8.5in at 96dpi) */
     outline: none !important;
     padding: 96px;
-    /* 1 inch Margins */
-    transition: all 0.3s ease;
+    /* 1 inch margins */
+    transition: box-shadow 0.2s ease;
     font-size: 12pt !important;
     line-height: 1.5;
     color: #1e293b;
+}
+
+.ProseMirror:focus-within {
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* List Style Types */
