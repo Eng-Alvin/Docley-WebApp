@@ -5,7 +5,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
-import { PostsModule } from './modules/posts/posts.module';
+
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { AdminModule } from './modules/admin/admin.module';
@@ -22,9 +22,8 @@ import { AppController } from './app.controller';
     SupabaseModule,
     UsersModule,
     ChatModule,
-    DocumentsModule,
     FeedbackModule,
-    PostsModule,
+    DocumentsModule,
     NotificationsModule,
     WebhooksModule,
     AdminModule,

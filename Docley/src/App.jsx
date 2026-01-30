@@ -10,7 +10,7 @@ import DashboardDocuments from './pages/Dashboard/DashboardDocuments';
 import DashboardSettings from './pages/Dashboard/DashboardSettings';
 import Billing from './pages/Dashboard/Billing';
 const TimetableGenerator = lazy(() => import('./pages/Dashboard/TimetableGenerator/TimetableGenerator'));
-import EditorPage from './pages/Editor/EditorPage';
+import EditorContainer from './pages/Editor/EditorContainer';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import ForgotPassword from './pages/Auth/ForgotPassword';
@@ -189,7 +189,7 @@ function App() {
                   {/* Protected Editor Route - Standalone without sidebar */}
                   <Route path="/dashboard/editor/:id" element={
                     <ProtectedRoute>
-                      <EditorPage />
+                      <EditorContainer />
                     </ProtectedRoute>
                   } />
 

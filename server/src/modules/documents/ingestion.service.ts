@@ -142,6 +142,55 @@ export class IngestionService {
         return chunks;
     }
 
+    /**
+     * Extracts high-fidelity HTML content from a file buffer.
+     * DOCX: Uses mammoth with style mapping.
+     * PDF: Uses pdf-parse with paragraph preservation.
+     */
+    async extractContentHtml(buffer: Buffer, mimetype: string): Promise<string> {
+        try {
+            if (mimetype.includes('pdf') || mimetype === 'application/pdf') {
+                const pdfData = await pdf(buffer);
+                const text = pdfData.text;
+                // Heuristic: Double newlines are paragraphs.
+                return text
+                    .split(/\n\s*\n/)
+                    .map(para => `<p>${para.trim()}</p>`)
+                    .join('');
+            } else if (
+                mimetype.includes('wordprocessingml') ||
+                mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ) {
+                const options = {
+                    styleMap: [
+                        "b => strong",
+                        "i => em",
+                        "u => u",
+                        "strike => s",
+                        "p[style-name='Heading 1'] => h1:fresh",
+                        "p[style-name='Heading 2'] => h2:fresh",
+                        "p[style-name='Heading 3'] => h3:fresh",
+                        "p[style-name='Heading 4'] => h4:fresh",
+                        "p[style-name='Heading 5'] => h5:fresh",
+                        "p[style-name='Heading 6'] => h6:fresh",
+                        "r[style-name='Strong'] => strong",
+                    ]
+                };
+                const result = await mammoth.convertToHtml({ buffer }, options);
+                return result.value;
+            } else {
+                // Fallback for text files
+                return buffer.toString('utf-8')
+                    .split(/\n\s*\n/)
+                    .map(para => `<p>${para.trim()}</p>`)
+                    .join('');
+            }
+        } catch (error) {
+            console.error('[Ingestion] HTML extraction error:', error);
+            return ''; // Fail gracefully, user will get empty doc or we can throw
+        }
+    }
+
     private async generateEmbedding(text: string): Promise<number[] | null> {
         if (!this.embeddingModel) return null;
         try {

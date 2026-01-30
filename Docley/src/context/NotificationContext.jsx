@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect } f
 import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { registerNotificationHandler, registerStatusHandler } from '../api/client';
+import { registerNotificationHandler } from '../api/client';
 
 const NotificationContext = createContext(null);
 
@@ -156,15 +156,6 @@ export const NotificationProvider = ({ children }) => {
     // Register for backend-driven notifications
     useEffect(() => {
         registerNotificationHandler(showNotification);
-        registerStatusHandler((type, value) => {
-            if (type === 'waking_up' && value) {
-                showNotification({
-                    type: 'processing',
-                    message: 'Waking up server...',
-                    ttl: null
-                });
-            }
-        });
     }, [showNotification]);
 
     return (

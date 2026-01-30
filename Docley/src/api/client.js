@@ -2,14 +2,9 @@ import axios from 'axios';
 import { supabase } from '../lib/supabase';
 
 let notificationHandler = null;
-let statusHandler = null;
 
 export const registerNotificationHandler = (handler) => {
     notificationHandler = handler;
-};
-
-export const registerStatusHandler = (handler) => {
-    statusHandler = handler;
 };
 
 // 1. Base URL Resolution & Safety Check
@@ -48,11 +43,7 @@ apiClient.interceptors.request.use(
             return Promise.reject(new Error(`Blocked malformed request: ${config.url}`));
         }
 
-        // Cold Start Detection: If request takes > 2s, signal "Waking up server..."
         config.metadata = { startTime: Date.now() };
-        config.slowRequestTimeout = setTimeout(() => {
-            if (statusHandler) statusHandler('waking_up', true);
-        }, 2000);
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -73,25 +64,9 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
     (response) => {
-        // Clear cold start timeout
-        if (response.config.slowRequestTimeout) {
-            clearTimeout(response.config.slowRequestTimeout);
-        }
-        if (statusHandler) statusHandler('waking_up', false);
-
-        // Trigger success notification if present
-        if (response.data?.notification && notificationHandler) {
-            notificationHandler(response.data.notification);
-        }
         return response;
     },
     async (error) => {
-        // Clear cold start timeout
-        if (error.config?.slowRequestTimeout) {
-            clearTimeout(error.config.slowRequestTimeout);
-        }
-        if (statusHandler) statusHandler('waking_up', false);
-
         const status = error.response?.status;
         const data = error.response?.data;
 
