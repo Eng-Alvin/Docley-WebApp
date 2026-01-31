@@ -175,6 +175,39 @@ You are "Docley Architect," You act as a senior professor. Your core specialty i
     }
   }
 
+  /**
+   * Specifically polishes text for academic tone and style.
+   * Returns HTML fragment.
+   */
+  async polishText(text: string, level: string, style: string): Promise<string> {
+    if (!text) throw new BadRequestException('Text is required');
+
+    const prompt = `
+      You are a professional academic editor. 
+      Rewrite the provided text for a ${level || 'undergraduate'} student using ${style || 'APA'} citations. 
+      
+      Return ONLY the polished HTML fragment (e.g., <p>...</p>). 
+      No preamble, no markdown code blocks, and no conversational text.
+      
+      Original Text:
+      "${text}"
+    `;
+
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      let generatedText = response.text();
+
+      // Cleanup if Gemini wraps in markdown despite instructions
+      generatedText = generatedText.replace(/^```html\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+
+      return this.sanitizeAIHTML(generatedText);
+    } catch (error) {
+      console.error('[ChatService] Polish error:', error);
+      throw new InternalServerErrorException('Failed to polish text');
+    }
+  }
+
   private extractJsonFromResponse(rawText: string): any {
     try {
       if (!rawText) return {};

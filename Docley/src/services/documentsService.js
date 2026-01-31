@@ -28,7 +28,7 @@ export async function createDocument(documentData) {
     if (!user) throw new Error('User not authenticated');
 
     const payload = {
-        user_id: user.id,
+        user_id: user.id, // Explicitly set owner for RLS
         title: documentData.title,
         content: documentData.content || '',
         content_html: documentData.contentHtml || '',

@@ -17,4 +17,15 @@ export class ChatController {
   ) {
     return this.chatService.processText(body.text, body.instruction, body.mode, body.documentId);
   }
+
+  @Post('polish')
+  @UseGuards(UsageGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async polish(
+    @Body() body: { text: string; academicLevel: string; citationStyle: string },
+  ) {
+    return {
+      html: await this.chatService.polishText(body.text, body.academicLevel, body.citationStyle)
+    };
+  }
 }

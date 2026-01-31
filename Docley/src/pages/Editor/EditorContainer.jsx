@@ -270,7 +270,7 @@ export default function EditorContainer() {
                         headerText={doc.metadata?.header_text}
                     />
                 </main>
-                <EditorSidebar />
+                <EditorSidebar editor={editor} />
             </div>
 
             {/* Modals */}

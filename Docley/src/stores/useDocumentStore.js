@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import apiClient from '../api/client';
 
 // Debounce helper
 const debounce = (func, wait) => {
@@ -31,6 +32,7 @@ const useDocumentStore = create((set, get) => {
         error: null,
         lastSavedAt: null, // Timestamp of last successful remote save
         conflictDetected: null, // { local, remote }
+        isProcessingAI: false,
 
         // Actions
         setId: (id) => set({ id }),
@@ -246,6 +248,41 @@ const useDocumentStore = create((set, get) => {
 
             // Fire and forget update
             await supabase.from('documents').update(updates).eq('id', id);
+        },
+
+        // Academic Polish Action
+        polishSelection: async (editor) => {
+            const { selection } = editor.state;
+            const { from, to } = selection;
+            const text = editor.state.doc.textBetween(from, to, ' ');
+
+            if (!text || text.trim().length === 0) {
+                // Return error to be handled by UI (toast)
+                return { success: false, error: 'Please select some text to polish.' };
+            }
+
+            set({ isProcessingAI: true });
+
+            try {
+                const { metadata } = get();
+                const response = await apiClient.post('/ai/polish', {
+                    text,
+                    academicLevel: metadata.academic_level || 'undergraduate',
+                    citationStyle: metadata.citation_style || 'APA 7th Edition'
+                });
+
+                if (response.data && response.data.html) {
+                    editor.commands.insertContent(response.data.html);
+                    return { success: true };
+                } else {
+                    throw new Error('Invalid response from AI');
+                }
+            } catch (error) {
+                console.error('Polish failed:', error);
+                return { success: false, error: error.response?.data?.message || 'Failed to polish text. AI service might be busy.' };
+            } finally {
+                set({ isProcessingAI: false });
+            }
         }
     };
 });

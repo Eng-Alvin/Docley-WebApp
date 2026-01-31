@@ -7,8 +7,10 @@ import {
 import useDocumentStore from '../../../stores/useDocumentStore';
 import { cn } from '../../../lib/utils';
 import { Button } from '../../../components/ui/Button';
+import { useToast } from '../../../context/ToastContext';
 
-export const EditorSidebar = ({ className }) => {
+export const EditorSidebar = ({ className, editor }) => {
+    const { addToast } = useToast();
     // Select only needed state to minimize re-renders
     const {
         title,
@@ -16,7 +18,9 @@ export const EditorSidebar = ({ className }) => {
         saveStatus,
         setTitle,
         updateMetadata,
-        isProcessing
+        isProcessing,
+        isProcessingAI,
+        polishSelection
     } = useDocumentStore(
         (state) => ({
             title: state.title,
@@ -24,7 +28,9 @@ export const EditorSidebar = ({ className }) => {
             saveStatus: state.saveStatus,
             setTitle: state.setTitle,
             updateMetadata: state.updateMetadata,
-            isProcessing: state.isProcessing
+            isProcessing: state.isProcessing,
+            isProcessingAI: state.isProcessingAI,
+            polishSelection: state.polishSelection
         }),
         shallow
     );
@@ -34,6 +40,16 @@ export const EditorSidebar = ({ className }) => {
 
     const handleChange = (key, value) => {
         updateMetadata({ [key]: value });
+    };
+
+    const handlePolish = async () => {
+        if (!editor) return;
+        const result = await polishSelection(editor);
+        if (result.success) {
+            addToast('Text polished successfully!', 'success');
+        } else {
+            addToast(result.error, 'error');
+        }
     };
 
     return (
@@ -133,11 +149,16 @@ export const EditorSidebar = ({ className }) => {
                         </Button>
                         <Button
                             variant="outline"
-                            className="w-full justify-start text-slate-600 hover:text-indigo-600 hover:border-indigo-200 bg-white"
-                            disabled={isProcessing}
+                            className="w-full justify-start text-slate-600 hover:text-indigo-600 hover:border-indigo-200 bg-white relative"
+                            disabled={isProcessing || isProcessingAI || !editor}
+                            onClick={handlePolish}
                         >
-                            <Book className="mr-2 h-4 w-4 text-emerald-500" />
-                            Academic Polish
+                            {isProcessingAI ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-indigo-500" />
+                            ) : (
+                                <Book className="mr-2 h-4 w-4 text-emerald-500" />
+                            )}
+                            {isProcessingAI ? 'Polishing...' : 'Academic Polish'}
                         </Button>
                         <Button
                             variant="outline"
