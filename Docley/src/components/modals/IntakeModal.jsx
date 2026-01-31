@@ -39,13 +39,25 @@ export function IntakeModal({ isOpen, onClose, onBack, initialContent = null }) 
                 fileSize: initialContent?.file?.size || null,
             });
 
+            // Handle file upload separately with specific error handling
             if (initialContent?.file) {
-                const filePath = await uploadDocumentFile(initialContent.file, document.id);
-                await updateDocument(document.id, {
-                    fileUrl: filePath,
-                    fileName: initialContent.file.name,
-                    fileSize: initialContent.file.size,
-                });
+                try {
+                    const filePath = await uploadDocumentFile(initialContent.file, document.id);
+                    await updateDocument(document.id, {
+                        fileUrl: filePath,
+                        fileName: initialContent.file.name,
+                        fileSize: initialContent.file.size,
+                    });
+                } catch (uploadError) {
+                    console.error('File upload failed:', uploadError);
+                    // Still navigate to document, but show warning
+                    addToast('Document created, but file upload failed. You can re-upload later.', 'warning');
+                    navigate(`/dashboard/editor/${document.id}`, {
+                        state: { ...formData, content: initialContent?.content || '', isNew: true }
+                    });
+                    onClose();
+                    return;
+                }
             }
 
             addToast('Document created successfully', 'success');
