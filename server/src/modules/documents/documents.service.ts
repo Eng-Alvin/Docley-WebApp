@@ -53,7 +53,7 @@ export class DocumentsService {
           content: contentHtml, // For TipTap
           content_html: contentHtml, // Legacy/Backup
           file_url: filePath,
-          status: 'ready',
+          status: 'draft',
           updated_at: new Date().toISOString(),
         })
         .eq('id', documentId)
