@@ -5,7 +5,7 @@ import { EDITOR_CONFIG } from '../editorConfig';
 import {
     Undo, Redo, Bold, Italic, Underline as UnderlineIcon,
     List, ListOrdered, Quote, ChevronDown, AlignLeft,
-    AlignCenter, AlignRight, AlignJustify, highlighter,
+    AlignCenter, AlignRight, AlignJustify,
     Type as FontIcon, ImageIcon, Layout, Eraser, Highlighter
 } from 'lucide-react';
 

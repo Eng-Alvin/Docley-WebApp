@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { shallow } from 'zustand/shallow';
+
 import {
     Book, GraduationCap, FileType, Sparkles, CheckCircle,
     AlertCircle, Loader2, ChevronRight, Wand2
@@ -12,28 +12,15 @@ import { useToast } from '../../../context/ToastContext';
 export const EditorSidebar = ({ className, editor }) => {
     const { addToast } = useToast();
     // Select only needed state to minimize re-renders
-    const {
-        title,
-        metadata,
-        saveStatus,
-        setTitle,
-        updateMetadata,
-        isProcessing,
-        isProcessingAI,
-        polishSelection
-    } = useDocumentStore(
-        (state) => ({
-            title: state.title,
-            metadata: state.metadata,
-            saveStatus: state.saveStatus,
-            setTitle: state.setTitle,
-            updateMetadata: state.updateMetadata,
-            isProcessing: state.isProcessing,
-            isProcessingAI: state.isProcessingAI,
-            polishSelection: state.polishSelection
-        }),
-        shallow
-    );
+    // Select only needed state to minimize re-renders (Atomic Selectors)
+    const title = useDocumentStore(state => state.title);
+    const metadata = useDocumentStore(state => state.metadata);
+    const saveStatus = useDocumentStore(state => state.saveStatus);
+    const setTitle = useDocumentStore(state => state.setTitle);
+    const updateMetadata = useDocumentStore(state => state.updateMetadata);
+    const isProcessing = useDocumentStore(state => state.isProcessing);
+    const isProcessingAI = useDocumentStore(state => state.isProcessingAI);
+    const polishSelection = useDocumentStore(state => state.polishSelection);
 
     // Local state for AI tools interactions (if needed) or UI toggles
     // For now, simple direct integration.

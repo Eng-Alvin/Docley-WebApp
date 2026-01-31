@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { shallow } from 'zustand/shallow';
+
 import {
     ArrowLeft, FileText, Loader2, CheckCircle, Wand2,
     BarChart3, MoreHorizontal, Settings, Download, Trash2
@@ -33,34 +33,24 @@ export default function EditorContainer() {
     const { addToast } = useToast();
 
     // Global Store State
-    const {
-        instantiate,
-        status,
-        doc,
-        saveStatus,
-        lastSavedAt,
-        updateMetadata,
-        resolveConflict,
-        conflictDetected,
-        updateContent // Used by TipTapCanvas, but purely via store inside component
-    } = useDocumentStore(
-        (state) => ({
-            instantiate: state.instantiate,
-            status: state.status,
-            doc: {
-                title: state.title,
-                metadata: state.metadata,
-                word_count: 0 // We might need to track this locally or in store
-            },
-            saveStatus: state.saveStatus,
-            lastSavedAt: state.lastSavedAt,
-            updateMetadata: state.updateMetadata,
-            resolveConflict: state.resolveConflict,
-            conflictDetected: state.conflictDetected,
-            updateContent: state.updateContent
-        }),
-        shallow
-    );
+    // Global Store State - Atomic Selectors to avoid re-render loops
+    const instantiate = useDocumentStore(state => state.instantiate);
+    const status = useDocumentStore(state => state.status);
+    const title = useDocumentStore(state => state.title);
+    const metadata = useDocumentStore(state => state.metadata);
+    const saveStatus = useDocumentStore(state => state.saveStatus);
+    const lastSavedAt = useDocumentStore(state => state.lastSavedAt);
+    const updateMetadata = useDocumentStore(state => state.updateMetadata);
+    const resolveConflict = useDocumentStore(state => state.resolveConflict);
+    const conflictDetected = useDocumentStore(state => state.conflictDetected);
+    const updateContent = useDocumentStore(state => state.updateContent);
+
+    // Derived State
+    const doc = {
+        title,
+        metadata: metadata || {},
+        word_count: 0
+    };
 
     // Initial content for editor (only for first load)
     // We use a ref/state to store it ONCE when status becomes ready to avoid subscribing to store updates
