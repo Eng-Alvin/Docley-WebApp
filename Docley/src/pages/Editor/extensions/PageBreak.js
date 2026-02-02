@@ -18,6 +18,7 @@ export const PageBreak = Node.create({
     parseHTML() {
         return [
             { tag: 'div[data-type="page-break"]' },
+            { tag: 'div.page-break' },
         ];
     },
 

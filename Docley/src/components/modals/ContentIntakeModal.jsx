@@ -212,7 +212,7 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
 
                         // Add page separator
                         if (pageIndex < textContents.length - 1) {
-                            htmlParts.push('<hr style="border:none; border-top:1px dashed #ccc; margin:1rem 0;" />');
+                            htmlParts.push('<div class="page-break"></div>');
                         }
                     });
 
@@ -256,11 +256,24 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
         setError('');
 
         try {
+            // Helper to inject manual page breaks where "Page X" markers are found
+            const injectPageBreaks = (text) => {
+                // Matches "Page 1", "Page 2", "Page [1]", etc.
+                // Case insensitive, optional brackets
+                return text.replace(/Page\s+\[?\d+\]?/gi, '<div class="page-break"></div>');
+            };
+
+            const processedContent = activeTab === 'paste' ? content : content;
+            const rawHtml = activeTab === 'paste'
+                ? content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('')
+                : htmlContent;
+
+            // Apply "Smart Ingestion" page breaks
+            const finalHtml = injectPageBreaks(rawHtml);
+
             onContinue({
-                content: activeTab === 'paste' ? content : content,
-                contentHtml: activeTab === 'paste'
-                    ? `<div style="font-size: 12pt;">${content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('')}</div>`
-                    : `<div style="font-size: 12pt;">${htmlContent}</div>`,
+                content: processedContent,
+                contentHtml: `<div style="font-size: 12pt;">${finalHtml}</div>`,
                 file: activeTab === 'upload' ? file : null,
                 inputType: activeTab,
             });

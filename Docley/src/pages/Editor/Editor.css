@@ -22,25 +22,26 @@
     min-height: 100%;
     width: 100%;
     padding: 2rem 0;
-    background-color: #f3f4f6;
-    /* User specified background */
+    background-color: #f0f2f5;
+    /* Updated grey background */
     overflow-y: auto;
 }
 
-/* Page Styling - A4 Style */
+/* Page Styling - Page View (816px for A4 at 96 DPI) */
 .prose.ProseMirror {
     position: relative;
     background-color: white !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-    /* Soft shadow for "pop" */
-    margin: 0 auto;
-    min-height: 297mm;
-    /* A4 Height */
-    width: 210mm;
-    /* A4 Width */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    /* Subtle elevation */
+    margin: 2rem auto;
+    /* Centering and top/bottom space */
+    min-height: 1056px;
+    /* A4 Height @ 96 DPI */
+    width: 816px;
+    /* A4 Width @ 96 DPI */
     outline: none !important;
-    padding: 20mm;
-    /* Standard Margins */
+    padding: 1in;
+    /* Standard Academic Margins */
     box-sizing: border-box;
     /* Padding included in width */
     transition: box-shadow 0.2s ease;
