@@ -53,12 +53,17 @@ export default function EditorContainer() {
     };
 
     // Initial content for editor (only for first load)
-    // We use a ref/state to store it ONCE when status becomes ready to avoid subscribing to store updates
-    const [initialContent, setInitialContent] = useState(null);
+    const [initialContent, setInitialContent] = useState(() => {
+        // Prioritize content from navigation state (e.g. from IntakeModal upload)
+        // This is the "Success Callback" logic the user mentioned
+        const stateContent = location.state?.contentHtml || location.state?.content;
+        return stateContent || null;
+    });
 
     useEffect(() => {
         if (status === 'ready' && initialContent === null) {
-            setInitialContent(useDocumentStore.getState().content);
+            const storeContent = useDocumentStore.getState().content;
+            setInitialContent(storeContent || '<p></p>');
         }
     }, [status, initialContent]);
 
@@ -86,22 +91,7 @@ export default function EditorContainer() {
 
     // Handle Title Change
     const handleTitleChange = (e) => {
-        updateContent(initialContent, e.target.value); // We need a way to update ONLY title... 
-        // Current store updateContent updates both. 
-        // Let's assume updateContent(content, title)
-        // But we don't want to pass content here if we just change title.
-        // I should probably add setTitle action to store.
-        // For now, I'll access store directly or use updateMetadata? No, title is root.
-        // 'updateContent' in store: (newContent, newTitle)
-        // I'll assume I can pass null for content to keep it?
-        // Checking store implementation: 
-        // updateContent: (newContent, newTitle) => ... set({ content: newContent ... })
-        // It overwrites content. 
-        // I need to fix store or use a hack.
-        // Hack: updateContent(editor.getHTML(), e.target.value)
-        if (editor) {
-            useDocumentStore.getState().updateContent(editor.getHTML(), e.target.value);
-        }
+        setTitle(e.target.value);
     };
 
     // Actions
@@ -251,7 +241,7 @@ export default function EditorContainer() {
 
             {/* Main Canvas + Sidebar */}
             <div className="flex-1 flex overflow-hidden">
-                <main className="flex-1 overflow-auto bg-[#cbd5e1] custom-scrollbar p-12">
+                <main className="flex-1 overflow-auto custom-scrollbar">
                     <TipTapCanvas
                         content={initialContent}
                         editable={true}

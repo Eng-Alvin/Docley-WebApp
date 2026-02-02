@@ -18,41 +18,40 @@
 .page-container {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     min-height: 100%;
     width: 100%;
     padding: 2rem 0;
     background-color: #f3f4f6;
-    /* Light gray background */
+    /* User specified background */
+    overflow-y: auto;
 }
 
 /* Page Styling - A4 Style */
-.ProseMirror {
+.prose.ProseMirror {
     position: relative;
-    background-color: white;
+    background-color: white !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-    /* Soft shadow */
-    margin: 0;
-    /* Centered by flex container */
+    /* Soft shadow for "pop" */
+    margin: 0 auto;
     min-height: 297mm;
     /* A4 Height */
     width: 210mm;
     /* A4 Width */
     outline: none !important;
     padding: 20mm;
-    /* Default A4 margins (can be overridden by inline styles) */
+    /* Standard Margins */
+    box-sizing: border-box;
+    /* Padding included in width */
     transition: box-shadow 0.2s ease;
     font-size: 11pt !important;
-    /* Standard academic font size */
     line-height: 1.5;
     color: #1e293b;
-    box-sizing: border-box;
-    /* Ensure padding doesn't affect width */
+    font-family: 'Arial', sans-serif;
 }
 
-
-
-.ProseMirror:focus-within {
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+.prose.ProseMirror:focus-within {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* List Style Types */

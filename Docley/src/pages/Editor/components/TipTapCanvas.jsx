@@ -60,16 +60,15 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
         editable: editable,
         editorProps: {
             attributes: {
+                // 'prose' class is now defined in Editor.css with A4 specs
                 class: 'prose focus:outline-none relative outline-none border-none shadow-none',
             },
         },
         onUpdate: ({ editor }) => {
             const html = editor.getHTML();
-            // Push to store
             updateContent(html);
         },
         onTransaction: () => {
-            // Notify parent to update toolbar state (active buttons etc)
             if (onEditorStateChange) {
                 onEditorStateChange();
             }
@@ -79,7 +78,7 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
                 onEditorReady(editor);
             }
         }
-    }, [editable]); // Re-create if editable changes? Usually handled by editor.setEditable
+    }, [editable]);
 
     // Sync Editable state
     useEffect(() => {
@@ -88,15 +87,16 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
         }
     }, [editor, editable]);
 
-    // ONE-TIME Content Initialization
-    // Requirement: Set content ONLY ONCE when document status becomes 'ready'
+    // Reliable Content Initialization
+    // Requirement: Set content when status is 'ready'
     useEffect(() => {
         if (editor && status === 'ready' && !isInitialized.current) {
-            // We use the 'content' prop which presumably comes from store initial state
-            // But to be extra safe and avoid race conditions, we could read from store directly?
-            // Passing it as prop is cleaner for testing, assuming parent passes the correct initial content.
+            // High-fidelity preservation: use setContent to render HTML correctly
             if (content) {
-                editor.commands.setContent(content);
+                console.log('[TipTapCanvas] Setting initial content (high-fidelity)');
+                editor.commands.setContent(content, false); // false = don't emit update
+            } else {
+                editor.commands.setContent('<p></p>', false);
             }
             isInitialized.current = true;
         }
@@ -107,42 +107,41 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
     }
 
     return (
-        <div className="editor-canvas page-container" style={{ transformOrigin: 'top center' }}>
-            <div
-                className="cursor-text"
-                onClick={() => editor?.chain().focus().run()}
-            >
-                {/* 
-                    We use padding for margins. 
-                    If docMargins is provided (from settings), use it. 
-                    Otherwise, CSS .ProseMirror padding (20mm) takes effect if we remove inline style,
-                    BUT we need to support dynamic updates.
-                    So we keep inline style but default to values that match CSS.
-                 */}
+        <div className="page-container">
+            <div className="editor-canvas" style={{ transformOrigin: 'top center' }}>
                 <div
-                    className="editor-content-wrapper"
-                    style={{
-                        // If specific margins are set in metadata, use them. Otherwise undefined lets CSS handle it (or use defaults)
-                        padding: docMargins ? `${docMargins.top}px ${docMargins.right}px ${docMargins.bottom}px ${docMargins.left}px` : undefined,
-                        position: 'relative',
-                        // minHeight handled by CSS .ProseMirror
-                    }}
+                    className="cursor-text"
+                    onClick={() => editor?.chain().focus().run()}
                 >
-                    {headerText && (
-                        <div
-                            className="absolute top-0 left-0 right-0 text-center text-xs text-slate-400 font-medium"
-                            style={{
-                                height: docMargins?.top ? `${docMargins.top / 2}px` : '38px', // Approx 10mm
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none'
-                            }}
-                        >
-                            {headerText}
-                        </div>
-                    )}
-                    <EditorContent editor={editor} />
+                    <div
+                        className="editor-content-wrapper"
+                        style={{
+                            position: 'relative',
+                            // Margins are now handled by .prose.ProseMirror padding in CSS (20mm)
+                            // But we can still support dynamic margins if docMargins is provided
+                            paddingTop: docMargins ? `${docMargins.top}px` : undefined,
+                            paddingBottom: docMargins ? `${docMargins.bottom}px` : undefined,
+                            paddingLeft: docMargins ? `${docMargins.left}px` : undefined,
+                            paddingRight: docMargins ? `${docMargins.right}px` : undefined,
+                        }}
+                    >
+                        {headerText && (
+                            <div
+                                className="absolute top-0 left-0 right-0 text-center text-xs text-slate-400 font-medium"
+                                style={{
+                                    height: '38px', // Approx 10mm
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    pointerEvents: 'none',
+                                    zIndex: 5
+                                }}
+                            >
+                                {headerText}
+                            </div>
+                        )}
+                        <EditorContent editor={editor} />
+                    </div>
                 </div>
             </div>
         </div>
