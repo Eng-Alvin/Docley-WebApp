@@ -257,13 +257,18 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
 
         try {
             // Helper to inject manual page breaks where "Page X" markers are found
-            const injectPageBreaks = (text) => {
-                // Matches "Page 1", "Page 2", "Page [1]", etc.
-                // Case insensitive, optional brackets
-                return text.replace(/Page\s+\[?\d+\]?/gi, '<div class="page-break"></div>');
+            const injectPageBreaks = (html) => {
+                // 1. First, target whole paragraphs that ONLY contain a page marker
+                // Matches <p>Page 1</p>, <p>Page: 2</p>, <p>Page [3].</p> etc.
+                let processed = html.replace(/<p>\s*Page\s*(?:[:\.-]?\s*)?\[?\d+\]?\.?\s*<\/p>/gi, '<div class="page-break"></div>');
+
+                // 2. Then, target any remaining inline markers that might be prefixing content
+                // Matches "Page 1 " or "Page [1]" within other tags
+                processed = processed.replace(/Page\s*(?:[:\.-]?\s*)?\[?\d+\]?\.?/gi, '<div class="page-break"></div>');
+
+                return processed;
             };
 
-            const processedContent = activeTab === 'paste' ? content : content;
             const rawHtml = activeTab === 'paste'
                 ? content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('')
                 : htmlContent;
@@ -272,8 +277,8 @@ export function ContentIntakeModal({ isOpen, onClose, onContinue }) {
             const finalHtml = injectPageBreaks(rawHtml);
 
             onContinue({
-                content: processedContent,
-                contentHtml: `<div style="font-size: 12pt;">${finalHtml}</div>`,
+                content: activeTab === 'paste' ? content : content, // Keep plain text as is for count
+                contentHtml: `<div style="font-size: 11pt;">${finalHtml}</div>`,
                 file: activeTab === 'upload' ? file : null,
                 inputType: activeTab,
             });

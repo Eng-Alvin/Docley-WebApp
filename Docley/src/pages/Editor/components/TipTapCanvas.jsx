@@ -117,19 +117,13 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
                         className="editor-content-wrapper"
                         style={{
                             position: 'relative',
-                            // Margins are now handled by .prose.ProseMirror padding in CSS (20mm)
-                            // But we can still support dynamic margins if docMargins is provided
-                            paddingTop: docMargins ? `${docMargins.top}px` : undefined,
-                            paddingBottom: docMargins ? `${docMargins.bottom}px` : undefined,
-                            paddingLeft: docMargins ? `${docMargins.left}px` : undefined,
-                            paddingRight: docMargins ? `${docMargins.right}px` : undefined,
                         }}
                     >
                         {headerText && (
                             <div
-                                className="absolute top-0 left-0 right-0 text-center text-xs text-slate-400 font-medium"
+                                className="absolute top-[0.4in] left-0 right-0 text-center text-xs text-slate-400 font-medium"
                                 style={{
-                                    height: '38px', // Approx 10mm
+                                    height: '0.4in', // Positioned within the 1in top margin
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
