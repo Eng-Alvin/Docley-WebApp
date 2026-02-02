@@ -1,18 +1,20 @@
 export const EDITOR_CONFIG = {
-    // Letter Dimensions at 96 DPI
-    PAGE_WIDTH: 816, // 8.5in * 96
-    PAGE_HEIGHT: 1056, // 11in * 96
+    // A4 Dimensions at 96 DPI
+    // Width: 210mm = 793.7px -> 794px
+    // Height: 297mm = 1122.5px -> 1123px
+    PAGE_WIDTH: 794,
+    PAGE_HEIGHT: 1123,
 
     // Page Rendering Constants
     PAGE_GAP: 32,
     PAGE_SHADOW: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
 
-    // Default Margins (1 inch = 96px)
+    // Default Margins (20mm ≈ 76px)
     DEFAULT_MARGINS: {
-        top: 96,
-        bottom: 96,
-        left: 96,
-        right: 96
+        top: 76,
+        bottom: 76,
+        left: 76,
+        right: 76
     },
 
     // Academic Defaults
@@ -30,4 +32,3 @@ export const EDITOR_CONFIG = {
         { label: '150%', value: 1.5 }
     ]
 };
-

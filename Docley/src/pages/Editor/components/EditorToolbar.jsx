@@ -6,7 +6,7 @@ import {
     Undo, Redo, Bold, Italic, Underline as UnderlineIcon,
     List, ListOrdered, Quote, ChevronDown, AlignLeft,
     AlignCenter, AlignRight, AlignJustify,
-    Type as FontIcon, ImageIcon, Layout, Eraser, Highlighter
+    Type as FontIcon, ImageIcon, Layout, Eraser, Highlighter, Scissors
 } from 'lucide-react';
 
 export const EditorToolbar = memo(({ editor, zoom, setZoom, onImageUpload, onCitationClick, imageInputRef, editorStateToken }) => {
@@ -428,6 +428,10 @@ export const EditorToolbar = memo(({ editor, zoom, setZoom, onImageUpload, onCit
                     )}
                 </div>
             </div>
+
+            <button onClick={() => editor.chain().focus().setPageBreak().run()} className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition-colors" title="Insert Page Break (Ctrl+Enter)">
+                <Scissors className="h-4 w-4" />
+            </button>
 
             <div className="w-px h-6 bg-slate-200 mx-1" />
 

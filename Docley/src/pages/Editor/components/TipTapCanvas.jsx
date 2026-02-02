@@ -9,6 +9,7 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { ResizableImage } from '../extensions/ResizableImage';
 import { Pagination } from '../extensions/Pagination';
+import { PageBreak } from '../extensions/PageBreak';
 import ListItem from '@tiptap/extension-list-item';
 import { FontSize, LineHeight, CustomBulletList, CustomOrderedList } from '../extensions/customExtensions';
 import { EDITOR_CONFIG } from '../editorConfig';
@@ -40,6 +41,7 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
             types: ['heading', 'paragraph'],
         }),
         ResizableImage,
+        PageBreak,
         FontSize,
         LineHeight,
         CustomBulletList,
@@ -58,7 +60,7 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
         editable: editable,
         editorProps: {
             attributes: {
-                class: 'focus:outline-none relative outline-none border-none shadow-none',
+                class: 'prose focus:outline-none relative outline-none border-none shadow-none',
             },
         },
         onUpdate: ({ editor }) => {
@@ -105,24 +107,32 @@ const TipTapCanvas = ({ content, editable, onEditorReady, onEditorStateChange, d
     }
 
     return (
-        <div className="editor-canvas" style={{ transformOrigin: 'top center' }}>
+        <div className="editor-canvas page-container" style={{ transformOrigin: 'top center' }}>
             <div
                 className="cursor-text"
                 onClick={() => editor?.chain().focus().run()}
             >
+                {/* 
+                    We use padding for margins. 
+                    If docMargins is provided (from settings), use it. 
+                    Otherwise, CSS .ProseMirror padding (20mm) takes effect if we remove inline style,
+                    BUT we need to support dynamic updates.
+                    So we keep inline style but default to values that match CSS.
+                 */}
                 <div
                     className="editor-content-wrapper"
                     style={{
-                        padding: docMargins ? `${docMargins.top}px ${docMargins.right}px ${docMargins.bottom}px ${docMargins.left}px` : '96px',
+                        // If specific margins are set in metadata, use them. Otherwise undefined lets CSS handle it (or use defaults)
+                        padding: docMargins ? `${docMargins.top}px ${docMargins.right}px ${docMargins.bottom}px ${docMargins.left}px` : undefined,
                         position: 'relative',
-                        minHeight: '1056px' // Visual height of one page
+                        // minHeight handled by CSS .ProseMirror
                     }}
                 >
                     {headerText && (
                         <div
                             className="absolute top-0 left-0 right-0 text-center text-xs text-slate-400 font-medium"
                             style={{
-                                height: docMargins?.top ? `${docMargins.top / 2}px` : '48px',
+                                height: docMargins?.top ? `${docMargins.top / 2}px` : '38px', // Approx 10mm
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',

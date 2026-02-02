@@ -14,24 +14,42 @@
     transition: transform 0.2s ease-out;
 }
 
-/* Page Styling - Google Docs Style */
+/* Page Container - Centers the document */
+.page-container {
+    display: flex;
+    justify-content: center;
+    min-height: 100%;
+    width: 100%;
+    padding: 2rem 0;
+    background-color: #f3f4f6;
+    /* Light gray background */
+}
+
+/* Page Styling - A4 Style */
 .ProseMirror {
     position: relative;
     background-color: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-    margin: 24px auto;
-    min-height: 1056px;
-    /* US Letter height (11in at 96dpi) */
-    width: 816px;
-    /* US Letter width (8.5in at 96dpi) */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    /* Soft shadow */
+    margin: 0;
+    /* Centered by flex container */
+    min-height: 297mm;
+    /* A4 Height */
+    width: 210mm;
+    /* A4 Width */
     outline: none !important;
-    padding: 96px;
-    /* 1 inch margins */
+    padding: 20mm;
+    /* Default A4 margins (can be overridden by inline styles) */
     transition: box-shadow 0.2s ease;
-    font-size: 12pt !important;
+    font-size: 11pt !important;
+    /* Standard academic font size */
     line-height: 1.5;
     color: #1e293b;
+    box-sizing: border-box;
+    /* Ensure padding doesn't affect width */
 }
+
+
 
 .ProseMirror:focus-within {
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
@@ -142,6 +160,40 @@
     color: #64748b !important;
     /* HEX - Slate 500 */
     letter-spacing: 0.05em;
+}
+
+/* Manual Page Break - Mimics Page Gap */
+.page-break {
+    user-select: none;
+    margin: 2rem -20mm;
+    /* reset vertical margin, pull out horizontal to edge */
+    width: calc(100% + 40mm);
+    /* Full width including padding */
+    height: 32px;
+    /* Matches PAGE_GAP */
+    background-color: #cbd5e1;
+    border-top: 1px solid #94a3b8;
+    border-bottom: 1px solid #94a3b8;
+    position: relative;
+    page-break-after: always;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    clear: both;
+    /* Ensure no floating elements interfere */
+}
+
+.page-break-visual {
+    background-color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    z-index: 10;
 }
 
 /* Placeholder */
