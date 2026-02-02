@@ -8,11 +8,10 @@ export const Pagination = Extension.create({
 
     addOptions() {
         return {
-            pageWidth: EDITOR_CONFIG.PAGE_WIDTH,
-            pageHeight: EDITOR_CONFIG.PAGE_HEIGHT,
-            margins: EDITOR_CONFIG.DEFAULT_MARGINS,
+            pageWidth: EDITOR_CONFIG.PAGE_WIDTH || 816,
+            pageHeight: EDITOR_CONFIG.PAGE_HEIGHT || 1056,
+            margins: EDITOR_CONFIG.DEFAULT_MARGINS || { top: 96, bottom: 96, left: 96, right: 96 },
             showPageNumbers: true,
-            pageNumberPosition: 'footer-right', // 'header-right', 'footer-center', 'footer-right'
         };
     },
 
@@ -23,45 +22,49 @@ export const Pagination = Extension.create({
         return [
             new Plugin({
                 key: new PluginKey('pagination'),
-                state: {
-                    init() {
-                        return DecorationSet.empty;
-                    },
-                    apply(tr, oldState) {
-                        return oldState; // We'll update decorations in the view layer for accurate measurements
-                    },
-                },
                 props: {
                     decorations(state) {
                         const { doc } = state;
                         const decorations = [];
-                        let currentHeight = margins.top;
+
+                        // Height estimation constants
+                        const LINE_HEIGHT = 24;
+                        const CHARS_PER_LINE = 85;
+                        const BLOCK_MARGIN = 12;
+
+                        let currentHeight = 0; // Relative to current page content area
                         let pageCount = 1;
 
-                        // Add Initial Page Header (Page 1) - Reduced spacing
+                        // 1. Initial Page Top Margin (Page 1)
                         decorations.push(
                             Decoration.widget(0, () => {
                                 const div = document.createElement('div');
-                                div.className = 'page-header first-page';
-                                div.style.padding = `${margins.top / 4}px ${margins.right}px 0 ${margins.left}px`;
-                                div.innerHTML = `
-                                    <div class="header-content"></div>
-                                    ${extension.options.showPageNumbers && extension.options.pageNumberPosition === 'header-right' ? `<span class="page-number">Page 1</span>` : ''}
-                                `;
+                                div.className = 'page-break-container first-page';
+                                div.innerHTML = `<div class="page-header first-page"></div>`;
                                 return div;
-                            })
+                            }, { side: -1 })
                         );
 
                         doc.descendants((node, pos) => {
                             if (node.isBlock) {
-                                // Estimate node height
-                                const nodeHeight = node.textContent.length > 0
-                                    ? Math.ceil(node.textContent.length / 80) * 24 + 16
-                                    : 24;
+                                // Simple height estimation
+                                const text = node.textContent;
+                                const lines = text.length > 0 ? Math.ceil(text.length / CHARS_PER_LINE) : 1;
+                                let nodeHeight = (lines * LINE_HEIGHT) + (BLOCK_MARGIN * 2);
 
-                                if (currentHeight + nodeHeight > pageHeight - margins.bottom) {
-                                    // Current page is finished
-                                    const footerPage = pageCount;
+                                // Adjust for headings
+                                if (node.type.name === 'heading') {
+                                    const level = node.attrs.level || 1;
+                                    nodeHeight = (32 + (6 - level) * 4) + BLOCK_MARGIN;
+                                }
+
+                                // Check if node fits on current page
+                                // Content area height = pageHeight - topMargin - bottomMargin
+                                const contentAreaHeight = pageHeight - margins.top - margins.bottom;
+
+                                if (currentHeight + nodeHeight > contentAreaHeight) {
+                                    // Inject Page Gap + Footer + Header
+                                    const footerNum = pageCount;
                                     pageCount++;
 
                                     decorations.push(
@@ -69,25 +72,22 @@ export const Pagination = Extension.create({
                                             const div = document.createElement('div');
                                             div.className = 'page-break-container';
                                             div.innerHTML = `
-                                                <div class="page-footer" style="padding: 0 ${margins.right}px ${margins.bottom / 2}px ${margins.left}px">
-                                                    <div class="footer-content"></div>
-                                                    ${extension.options.showPageNumbers && extension.options.pageNumberPosition.startsWith('footer') ? `<span class="page-number">Page ${footerPage}</span>` : ''}
+                                                <div class="page-footer">
+                                                    ${extension.options.showPageNumbers ? `<span class="page-number">Page ${footerNum}</span>` : ''}
                                                 </div>
                                                 <div class="page-gap"></div>
-                                                <div class="page-header" style="padding: ${margins.top / 2}px ${margins.right}px 0 ${margins.left}px">
-                                                    <div class="header-content"></div>
-                                                    ${extension.options.showPageNumbers && extension.options.pageNumberPosition === 'header-right' ? `<span class="page-number">Page ${pageCount}</span>` : ''}
-                                                </div>
+                                                <div class="page-header"></div>
                                             `;
                                             return div;
-                                        })
+                                        }, { side: -1 })
                                     );
-                                    currentHeight = margins.top + nodeHeight;
+
+                                    currentHeight = nodeHeight; // Start new page with this node
                                 } else {
                                     currentHeight += nodeHeight;
                                 }
                             }
-                            return false;
+                            return false; // Don't descend into block children
                         });
 
                         return DecorationSet.create(doc, decorations);

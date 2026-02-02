@@ -34,14 +34,13 @@
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.1);
     /* Google Docs depth */
     margin: 2rem auto;
-    /* Centering and top/bottom space */
-    min-height: 1056px;
-    /* A4 Height @ 96 DPI */
-    width: 816px;
+    /* Centering and top/bottom space for the first/last page */
+    min-width: 816px;
     /* A4 Width @ 96 DPI */
+    max-width: 816px;
     outline: none !important;
-    padding: 1in;
-    /* Standard Academic Margins (96px) */
+    padding: 0 1in;
+    /* Side margins only; Top/Bottom handled by pagination blocks */
     box-sizing: border-box;
     /* Padding included in width */
     transition: box-shadow 0.2s ease;
@@ -49,6 +48,8 @@
     line-height: 1.5;
     color: #1e293b;
     font-family: 'Arial', sans-serif;
+    min-height: 1056px;
+    /* Initial height for empty doc */
 }
 
 .prose.ProseMirror:focus-within {
@@ -113,53 +114,53 @@
     margin-bottom: 0.25em;
 }
 
-/* Page Break & Spaces */
+/* Page Break & Spaces (Decoration Widgets) */
 .page-break-container {
     user-select: none;
     pointer-events: none;
-    margin: 0 -96px;
-    width: calc(100% + 192px);
+    margin: 0 -1in;
+    /* Pull out to edges of the 816px paper area */
+    width: 816px;
     display: flex;
     flex-direction: column;
 }
 
 .page-gap {
-    height: 48px;
-    background-color: #cbd5e1;
-    /* Gray 300 - matches main background */
-    border-top: 1px solid #94a3b8;
-    border-bottom: 1px solid #94a3b8;
+    height: 32px;
+    /* Visual space between pages */
+    background-color: #f0f2f5;
+    /* Matches overall app background */
+    border-top: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
     position: relative;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .page-footer,
 .page-header {
-    height: 50px;
+    height: 1in;
+    /* Academic standard top/bottom margins */
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     font-size: 11px;
     color: #94a3b8;
     background-color: white;
     font-family: 'Inter', sans-serif;
+    padding: 0 1in;
+    box-sizing: border-box;
 }
 
-.page-header {
-    border-bottom: 1px dashed transparent;
-    margin-bottom: 16px;
-}
-
-.page-footer {
-    border-top: 1px dashed transparent;
-    margin-top: 16px;
+.page-header.first-page {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
 }
 
 .page-number {
     font-weight: 600;
     color: #64748b !important;
-    /* HEX - Slate 500 */
     letter-spacing: 0.05em;
+    opacity: 0.7;
 }
 
 /* Manual Page Break - Mimics Page Gap */
